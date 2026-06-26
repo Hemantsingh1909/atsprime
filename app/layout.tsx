@@ -31,6 +31,20 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                if (window.location.pathname === "/") {
+                  if ("scrollRestoration" in history) {
+                    history.scrollRestoration = "manual";
+                  }
+                  window.scrollTo(0, 0);
+                }
+              } catch (e) {}
+            `,
+          }}
+        />
         <PHProvider>
           <AuthProvider>
             {children}
