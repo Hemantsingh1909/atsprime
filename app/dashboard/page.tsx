@@ -188,6 +188,59 @@ function DashboardContent() {
     }
   }, [searchParams]);
 
+  // Load state from sessionStorage on client mount
+  useEffect(() => {
+    try {
+      const savedStep = sessionStorage.getItem("atsprime_dashboard_step");
+      const savedSelectedFile = sessionStorage.getItem("atsprime_dashboard_selectedFile");
+      const savedResumeText = sessionStorage.getItem("atsprime_dashboard_resumeText");
+      const savedJobDesc = sessionStorage.getItem("atsprime_dashboard_jobDescription");
+      const savedOptimizedData = sessionStorage.getItem("atsprime_dashboard_optimizedData");
+      const savedBase64 = sessionStorage.getItem("atsprime_dashboard_uploadedFileBase64");
+
+      if (savedStep) {
+        const parsedStep = parseInt(savedStep, 10);
+        if (parsedStep === 1 || parsedStep === 2 || parsedStep === 3 || parsedStep === 4) {
+          // If the page was refreshed during dynamic tailoring, step back to Step 2 so they can re-run
+          setStep(parsedStep === 3 ? 2 : parsedStep as 1 | 2 | 3 | 4);
+        }
+      }
+      if (savedSelectedFile) setSelectedFile(JSON.parse(savedSelectedFile));
+      if (savedResumeText) setResumeText(savedResumeText);
+      if (savedJobDesc) setJobDescription(savedJobDesc);
+      if (savedOptimizedData) setOptimizedData(JSON.parse(savedOptimizedData));
+      if (savedBase64) setUploadedFileBase64(savedBase64);
+    } catch (e) {
+      console.error("Failed to restore session state:", e);
+    }
+  }, []);
+
+  // Save state to sessionStorage when states change
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("atsprime_dashboard_step", String(step));
+      if (selectedFile) {
+        sessionStorage.setItem("atsprime_dashboard_selectedFile", JSON.stringify(selectedFile));
+      } else {
+        sessionStorage.removeItem("atsprime_dashboard_selectedFile");
+      }
+      sessionStorage.setItem("atsprime_dashboard_resumeText", resumeText || "");
+      sessionStorage.setItem("atsprime_dashboard_jobDescription", jobDescription || "");
+      if (optimizedData) {
+        sessionStorage.setItem("atsprime_dashboard_optimizedData", JSON.stringify(optimizedData));
+      } else {
+        sessionStorage.removeItem("atsprime_dashboard_optimizedData");
+      }
+      if (uploadedFileBase64) {
+        sessionStorage.setItem("atsprime_dashboard_uploadedFileBase64", uploadedFileBase64);
+      } else {
+        sessionStorage.removeItem("atsprime_dashboard_uploadedFileBase64");
+      }
+    } catch (e) {
+      console.error("Failed to save session state:", e);
+    }
+  }, [step, selectedFile, resumeText, jobDescription, optimizedData, uploadedFileBase64]);
+
   // Auto-save resume if user is logged in and results are generated
   useEffect(() => {
     if (step === 4 && user && !hasSavedThisRun && optimizedData) {

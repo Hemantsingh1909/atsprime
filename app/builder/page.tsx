@@ -134,9 +134,35 @@ function BuilderContent() {
   const [activeTab, setActiveTab] = useState<"personal" | "summary" | "experience" | "education" | "skills" | "projects" | "achievements">("personal");
   const [selectedTemplate, setSelectedTemplate] = useState("classic");
   const [resumeData, setResumeData] = useState<ResumeData>(initialResumeData);
+  const [savedResumeData, setSavedResumeData] = useState<ResumeData>(initialResumeData);
+  const [isDirty, setIsDirty] = useState(false);
   const [isPro, setIsPro] = useState(true);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  // Set isDirty to true when current resumeData differs from savedResumeData
+  useEffect(() => {
+    if (JSON.stringify(resumeData) !== JSON.stringify(savedResumeData)) {
+      setIsDirty(true);
+    } else {
+      setIsDirty(false);
+    }
+  }, [resumeData, savedResumeData]);
+
+  // Warn on page unload/reload if there are unsaved edits
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = "You have unsaved changes. Are you sure you want to leave?";
+        return e.returnValue;
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [isDirty]);
 
   // No subscription check needed - application is free
   useEffect(() => {
@@ -378,6 +404,9 @@ function BuilderContent() {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
       }, 1000);
+
+      // Successfully saved/exported, reset unsaved changes state
+      setSavedResumeData(resumeData);
     } catch (error) {
       console.error(error);
       alert("Error printing PDF document.");
@@ -393,7 +422,15 @@ function BuilderContent() {
       {/* Sticky top dashboard navigation */}
       <header className="sticky top-0 z-45 bg-zinc-950 border-b border-hairline px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-2 group">
+          <Link 
+            href="/" 
+            onClick={(e) => {
+              if (isDirty && !window.confirm("You have unsaved changes. Are you sure you want to leave?")) {
+                e.preventDefault();
+              }
+            }}
+            className="flex items-center gap-2 group"
+          >
             <svg viewBox="0 0 24 24" className="h-6 w-6 flex-shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
               <circle cx="6" cy="9" r="2.5" fill="#2563eb" />
               <line x1="10" y1="19" x2="17" y2="7" stroke="#2563eb" strokeWidth="5" strokeLinecap="round" />
