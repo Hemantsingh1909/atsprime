@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Sparkles, LogOut, ChevronDown, User } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
@@ -31,6 +32,14 @@ export default function Navbar() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const { user, signOut } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const pathname = usePathname();
+
+  const handleLogoClick = (e: React.MouseEvent) => {
+    if (pathname === "/") {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
 
   return (
     <>
@@ -41,14 +50,16 @@ export default function Navbar() {
 
             <Link
               href="/"
-              className="flex items-center gap-2.5 group"
+              onClick={handleLogoClick}
+              className="flex items-center gap-2 group"
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-sm bg-primary text-on-primary shadow-sm group-hover:shadow-md transition-shadow">
-                <Sparkles size={20} strokeWidth={2} />
-              </div>
+              <svg viewBox="0 0 24 24" className="h-7 w-7 flex-shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="6" cy="9" r="2.5" fill="#2563eb" />
+                <line x1="10" y1="19" x2="17" y2="7" stroke="#2563eb" strokeWidth="5" strokeLinecap="round" />
+              </svg>
 
-              <span className="text-lg font-semibold tracking-tight">
-                Resume<span className="text-primary">AI</span>
+              <span className="text-lg font-bold tracking-tight text-zinc-900 dark:text-white">
+                ATSPrime
               </span>
             </Link>
 

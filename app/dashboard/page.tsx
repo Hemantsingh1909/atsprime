@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Upload,
@@ -104,6 +104,15 @@ const analysisSteps = [
 
 function DashboardContent() {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+
+  const handleLogoClick = (e: React.MouseEvent) => {
+    if (pathname === "/") {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   const {
     user,
     savedResumes,
@@ -352,14 +361,15 @@ Software Engineer Intern | CodeLabs (2023)
       {/* Sticky top dashboard navigation */}
       <header className="sticky top-0 z-45 bg-canvas/80 backdrop-blur-md border-b border-hairline">
         <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-primary text-on-primary shadow-sm">
-              <Sparkles size={16} strokeWidth={2} />
-            </div>
-            <span className="text-base font-semibold tracking-tight">
-              Resume<span className="text-primary font-bold">AI</span>
+          <Link href="/" onClick={handleLogoClick} className="flex items-center gap-2 group">
+            <svg viewBox="0 0 24 24" className="h-6 w-6 flex-shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="6" cy="9" r="2.5" fill="#2563eb" />
+              <line x1="10" y1="19" x2="17" y2="7" stroke="#2563eb" strokeWidth="5" strokeLinecap="round" />
+            </svg>
+            <span className="text-base font-bold tracking-tight text-white">
+              ATSPrime
             </span>
-            <span className="text-[10px] font-mono font-medium bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded border border-hairline-strong">
+            <span className="text-[10px] font-mono font-medium bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded border border-hairline-strong ml-1">
               SANDBOX
             </span>
           </Link>
@@ -1054,7 +1064,7 @@ Software Engineer Intern | CodeLabs (2023)
                   </div>
                   
                   <h2 className="text-xl font-semibold text-white">
-                    {authType === "signup" ? "Save your optimized resume" : "Sign In to ResumeAI"}
+                    {authType === "signup" ? "Save your optimized resume" : "Sign In to ATSPrime"}
                   </h2>
                   
                   <p className="text-zinc-400 text-xs mt-1.5 leading-relaxed">
@@ -1134,7 +1144,7 @@ Software Engineer Intern | CodeLabs (2023)
                   >
                     {authType === "signup"
                       ? "Already have an account? Sign In"
-                      : "New to ResumeAI? Create an account"}
+                      : "New to ATSPrime? Create an account"}
                   </button>
                 </div>
 
@@ -1147,7 +1157,7 @@ Software Engineer Intern | CodeLabs (2023)
       {/* Footer */}
       <footer className="border-t border-hairline bg-canvas py-8 px-6 mt-12 text-center text-xs text-zinc-600 dark:text-zinc-500">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© 2026 ResumeAI Sandbox. All rights reserved.</p>
+          <p>© 2026 ATSPrime Sandbox. All rights reserved.</p>
           <div className="flex items-center gap-6">
             <Link href="/" className="hover:text-zinc-300">Home</Link>
             <span className="h-3 w-px bg-zinc-800" />

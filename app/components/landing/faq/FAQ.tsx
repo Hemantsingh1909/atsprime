@@ -7,14 +7,14 @@ import SupportCard from "./SupportCard";
 
 const faqs = [
   {
-    question: "Will ResumeAI rewrite my entire resume?",
+    question: "Will ATSPrime rewrite my entire resume?",
     answer:
-      "No. ResumeAI improves your existing resume by rewriting bullet points, optimizing ATS keywords, and tailoring it for each job while preserving your actual experience and achievements.",
+      "No. ATSPrime improves your existing resume by rewriting bullet points, optimizing ATS keywords, and tailoring it for each job while preserving your actual experience and achievements.",
   },
   {
     question: "Will my resume pass Applicant Tracking Systems (ATS)?",
     answer:
-      "ResumeAI analyzes your resume against a job description and recommends improvements commonly associated with stronger ATS compatibility. Because employers use different ATS platforms, no tool can guarantee passing every system.",
+      "ATSPrime analyzes your resume against a job description and recommends improvements commonly associated with stronger ATS compatibility. Because employers use different ATS platforms, no tool can guarantee passing every system.",
   },
   {
     question: "Can I tailor my resume for different companies?",
@@ -29,7 +29,7 @@ const faqs = [
   {
     question: "Which file formats are supported?",
     answer:
-      "ResumeAI supports PDF and DOCX uploads and exports, making it easy to edit, download, and submit your resume wherever you're applying.",
+      "ATSPrime supports PDF and DOCX uploads and exports, making it easy to edit, download, and submit your resume wherever you're applying.",
   },
   {
     question: "Is my resume data secure?",
@@ -44,7 +44,7 @@ const faqs = [
   {
     question: "Is there a free plan available?",
     answer:
-      "Yes. You can start with the Free plan to experience ResumeAI before upgrading to unlock unlimited resume tailoring and premium AI features.",
+      "Yes. You can start with the Free plan to experience ATSPrime before upgrading to unlock unlimited resume tailoring and premium AI features.",
   },
 ];
 
@@ -86,8 +86,8 @@ export default function FAQ() {
             We&apos;ve got answers.
           </h2>
 
-          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-600 dark:text-zinc-400">
-            Everything you need to know before using ResumeAI.
+          <p className="mt-7 text-lg leading-relaxed text-zinc-600 dark:text-zinc-400">
+            Everything you need to know before using ATSPrime.
           </p>
         </motion.div>
 

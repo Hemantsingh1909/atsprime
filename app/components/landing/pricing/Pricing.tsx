@@ -9,7 +9,7 @@ const plans = [
     title: "Free",
     priceMonthly: "₹0",
     priceYearly: "₹0",
-    subtitle: "Perfect for trying ResumeAI",
+    subtitle: "Perfect for trying ATSPrime",
     button: "Start Free",
     features: [
       "3 Resume Tailors",

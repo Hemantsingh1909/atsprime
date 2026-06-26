@@ -15,7 +15,7 @@ const steps = [
     number: "01",
     title: "Upload Your Resume",
     description:
-      "Upload your existing PDF or DOCX resume. ResumeAI extracts your experience, education, projects, and skills automatically.",
+      "Upload your existing PDF or DOCX resume. ATSPrime extracts your experience, education, projects, and skills automatically.",
     icon: <FileText size={28} />,
   },
   {
@@ -36,7 +36,7 @@ const steps = [
     number: "04",
     title: "ATS Optimization",
     description:
-      "ResumeAI analyzes missing keywords, formatting, readability, and recruiter compatibility to maximize your ATS score.",
+      "ATSPrime analyzes missing keywords, formatting, readability, and recruiter compatibility to maximize your ATS score.",
     icon: <Gauge size={28} />,
   },
   {
@@ -69,7 +69,7 @@ export default function HowItWorks() {
           </h2>
 
           <p className="mt-7 text-lg leading-relaxed text-zinc-600 dark:text-zinc-400">
-            ResumeAI removes the repetitive work of tailoring resumes so you can spend more time applying to the jobs that matter.
+            ATSPrime removes the repetitive work of tailoring resumes so you can spend more time applying to the jobs that matter.
           </p>
         </div>
 

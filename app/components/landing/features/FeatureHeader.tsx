@@ -48,7 +48,7 @@ export default function FeatureHeader() {
       {/* Description */}
 
       <p className="mx-auto mt-7 max-w-2xl text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
-        From ATS optimization to AI-powered resume rewriting, ResumeAI helps you create tailored resumes, generate personalized cover letters, and apply faster with confidence.
+        From ATS optimization to AI-powered resume rewriting, ATSPrime helps you create tailored resumes, generate personalized cover letters, and apply faster with confidence.
       </p>
 
       {/* Bottom divider */}

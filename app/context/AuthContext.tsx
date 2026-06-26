@@ -37,13 +37,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Check for active session on mount
   useEffect(() => {
     try {
-      const activeSession = localStorage.getItem("resumeai_session");
+      const activeSession = localStorage.getItem("atsprime_session");
       if (activeSession) {
         const parsedUser = JSON.parse(activeSession) as User;
         setUser(parsedUser);
         
         // Load user's saved resumes
-        const userResumes = localStorage.getItem(`resumeai_resumes_${parsedUser.email}`);
+        const userResumes = localStorage.getItem(`atsprime_resumes_${parsedUser.email}`);
         if (userResumes) {
           setSavedResumes(JSON.parse(userResumes) as SavedResume[]);
         }
@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Monitor user changes to load/clear resumes
   useEffect(() => {
     if (user) {
-      const userResumes = localStorage.getItem(`resumeai_resumes_${user.email}`);
+      const userResumes = localStorage.getItem(`atsprime_resumes_${user.email}`);
       if (userResumes) {
         setSavedResumes(JSON.parse(userResumes) as SavedResume[]);
       } else {
@@ -81,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Check if user already exists
-      const usersStr = localStorage.getItem("resumeai_users") || "[]";
+      const usersStr = localStorage.getItem("atsprime_users") || "[]";
       const users = JSON.parse(usersStr) as { email: string; password: string }[];
       
       const userExists = users.some((u) => u.email === emailTrim);
@@ -91,11 +91,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Save user record
       users.push({ email: emailTrim, password });
-      localStorage.setItem("resumeai_users", JSON.stringify(users));
+      localStorage.setItem("atsprime_users", JSON.stringify(users));
 
       // Sign user in automatically
       const newUser: User = { email: emailTrim, name: emailTrim.split("@")[0] };
-      localStorage.setItem("resumeai_session", JSON.stringify(newUser));
+      localStorage.setItem("atsprime_session", JSON.stringify(newUser));
       setUser(newUser);
 
       return { success: true };
@@ -115,7 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: "Email and password are required." };
       }
 
-      const usersStr = localStorage.getItem("resumeai_users") || "[]";
+      const usersStr = localStorage.getItem("atsprime_users") || "[]";
       const users = JSON.parse(usersStr) as { email: string; password: string }[];
       
       const matchedUser = users.find((u) => u.email === emailTrim && u.password === password);
@@ -125,7 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Sign user in
       const activeUser: User = { email: emailTrim, name: emailTrim.split("@")[0] };
-      localStorage.setItem("resumeai_session", JSON.stringify(activeUser));
+      localStorage.setItem("atsprime_session", JSON.stringify(activeUser));
       setUser(activeUser);
 
       return { success: true };
@@ -136,7 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Signout
   const signOut = () => {
-    localStorage.removeItem("resumeai_session");
+    localStorage.removeItem("atsprime_session");
     setUser(null);
     setSavedResumes([]);
   };
@@ -169,7 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const updatedResumes = [newResume, ...savedResumes];
     setSavedResumes(updatedResumes);
-    localStorage.setItem(`resumeai_resumes_${user.email}`, JSON.stringify(updatedResumes));
+    localStorage.setItem(`atsprime_resumes_${user.email}`, JSON.stringify(updatedResumes));
 
     return newResume;
   };
@@ -180,7 +180,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     const updatedResumes = savedResumes.filter((r) => r.id !== id);
     setSavedResumes(updatedResumes);
-    localStorage.setItem(`resumeai_resumes_${user.email}`, JSON.stringify(updatedResumes));
+    localStorage.setItem(`atsprime_resumes_${user.email}`, JSON.stringify(updatedResumes));
   };
 
   return (

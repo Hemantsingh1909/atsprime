@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Github, Linkedin, Send, Sparkles } from "lucide-react";
 import FooterColumn from "./FooterColumn";
 
@@ -19,17 +20,17 @@ const XIcon = ({ size = 18, className = "" }: { size?: number; className?: strin
 const socialLinks = [
   {
     icon: XIcon,
-    href: "https://x.com/resumeai",
+    href: "https://x.com/atsprime",
     props: {},
   },
   {
     icon: Linkedin,
-    href: "https://linkedin.com/company/resumeai",
+    href: "https://linkedin.com/company/atsprime",
     props: { strokeWidth: 1.5 },
   },
   {
     icon: Github,
-    href: "https://github.com/Hemantsingh1909/resumeai",
+    href: "https://github.com/Hemantsingh1909/atsprime",
     props: { strokeWidth: 1.5 },
   },
 ];
@@ -56,6 +57,15 @@ const footerLinks = {
 };
 
 export default function Footer() {
+  const pathname = usePathname();
+
+  const handleLogoClick = (e: React.MouseEvent) => {
+    if (pathname === "/") {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   return (
     <footer className="border-t border-hairline bg-canvas-soft/80 backdrop-blur-sm">
       <div className="mx-auto max-w-7xl px-6 py-20">
@@ -128,13 +138,15 @@ export default function Footer() {
           <div className="lg:col-span-2">
             <Link
               href="/"
-              className="inline-flex items-center gap-2"
+              onClick={handleLogoClick}
+              className="inline-flex items-center gap-2 group"
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-sm bg-primary text-on-primary shadow-sm">
-                <Sparkles size={20} strokeWidth={1.5} />
-              </div>
+              <svg viewBox="0 0 24 24" className="h-8 w-8 flex-shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="6" cy="9" r="2.5" fill="#2563eb" />
+                <line x1="10" y1="19" x2="17" y2="7" stroke="#2563eb" strokeWidth="5" strokeLinecap="round" />
+              </svg>
               <span className="text-2xl font-bold text-zinc-900 dark:text-white">
-                Resume<span className="text-primary">AI</span>
+                ATSPrime
               </span>
             </Link>
 
@@ -193,7 +205,7 @@ export default function Footer() {
 
         <div className="mt-20 flex flex-col items-center justify-between gap-6 border-t border-hairline pt-8 text-sm text-zinc-500 dark:text-zinc-400 md:flex-row md:gap-0">
           <div className="flex flex-col items-center gap-4 md:flex-row md:gap-6">
-            <p>© 2026 ResumeAI. All rights reserved.</p>
+            <p>© 2026 ATSPrime. All rights reserved.</p>
 
             {/* Desktop Vertical Divider */}
             <div className="hidden h-4 w-px bg-hairline md:block" />
@@ -213,12 +225,12 @@ export default function Footer() {
           <p className="text-center md:text-right">
             🚀 Building in Public &bull; Follow our journey →{" "}
             <Link
-              href="https://github.com/Hemantsingh1909/resumeai"
+              href="https://github.com/Hemantsingh1909/atsprime"
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary hover:opacity-85 font-medium transition-opacity"
             >
-              @resumeai
+              @atsprime
             </Link>
           </p>
         </div>
