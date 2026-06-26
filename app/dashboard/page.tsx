@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { templates, generateTemplateHtml } from "@/app/utils/templates";
+import posthog from "posthog-js";
 
 // Types for resume optimization
 interface BulletDiff {
@@ -204,6 +205,23 @@ function DashboardContent() {
     }
   }, [step, user, hasSavedThisRun, optimizedData]);
 
+  // Track step-based funnel progress for drop-offs
+  useEffect(() => {
+    if (step === 2) {
+      posthog.capture("job_description_step_reached");
+    }
+  }, [step]);
+
+  // Track template selections in the dashboard results tab
+  useEffect(() => {
+    if (step === 4) {
+      posthog.capture("template_selected", {
+        template_id: selectedTemplate,
+        source: "dashboard_results",
+      });
+    }
+  }, [selectedTemplate, step]);
+
   // Handle fake file drag & drop
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -213,7 +231,6 @@ function DashboardContent() {
   const handleDragLeave = () => {
     setIsDragging(false);
   };
-
   const processFile = async (file: File) => {
     setIsParsing(true);
     setApiError(null);
@@ -224,6 +241,12 @@ function DashboardContent() {
     });
     setUploadedFile(file);
 
+    posthog.capture("resume_upload_started", {
+      file_name: file.name,
+      file_size_kb: Math.round(file.size / 1024),
+      file_type: file.name.split(".").pop(),
+    });
+
     try {
       if (file.name.toLowerCase().endsWith(".txt")) {
         const reader = new FileReader();
@@ -232,10 +255,12 @@ function DashboardContent() {
           setResumeText(text);
           setUploadedFileBase64(null);
           setIsParsing(false);
+          posthog.capture("resume_upload_success", { file_type: "txt" });
         };
         reader.onerror = () => {
           setApiError("Failed to read text file.");
           setIsParsing(false);
+          posthog.capture("resume_upload_failed", { file_type: "txt", error: "Failed to read text file." });
         };
         reader.readAsText(file);
       } else if (file.name.toLowerCase().endsWith(".pdf")) {
@@ -246,10 +271,12 @@ function DashboardContent() {
           setUploadedFileBase64(base64);
           setResumeText(`[PDF Document: ${file.name}]`);
           setIsParsing(false);
+          posthog.capture("resume_upload_success", { file_type: "pdf" });
         };
         reader.onerror = () => {
           setApiError("Failed to read PDF file.");
           setIsParsing(false);
+          posthog.capture("resume_upload_failed", { file_type: "pdf", error: "Failed to read PDF file." });
         };
         reader.readAsDataURL(file);
       } else if (file.name.toLowerCase().endsWith(".docx")) {
@@ -261,9 +288,11 @@ function DashboardContent() {
             const result = await mammoth.extractRawText({ arrayBuffer });
             setResumeText(result.value);
             setUploadedFileBase64(null);
+            posthog.capture("resume_upload_success", { file_type: "docx" });
           } catch (err: any) {
             console.error("Docx parsing error:", err);
             setApiError("Failed to parse DOCX file content.");
+            posthog.capture("resume_upload_failed", { file_type: "docx", error: err.message || "Failed to parse DOCX file content." });
           } finally {
             setIsParsing(false);
           }
@@ -271,19 +300,22 @@ function DashboardContent() {
         reader.onerror = () => {
           setApiError("Failed to read DOCX file.");
           setIsParsing(false);
+          posthog.capture("resume_upload_failed", { file_type: "docx", error: "Failed to read DOCX file." });
         };
         reader.readAsArrayBuffer(file);
       } else {
+        const fileExt = file.name.split(".").pop();
         setApiError("Unsupported file format. Please upload PDF, DOCX, or TXT.");
         setIsParsing(false);
+        posthog.capture("resume_upload_failed", { file_type: fileExt, error: "Unsupported file format." });
       }
     } catch (err: any) {
       console.error("File processing error:", err);
       setApiError("An error occurred while processing the file.");
       setIsParsing(false);
+      posthog.capture("resume_upload_failed", { file_name: file.name, error: err.message || "An error occurred while processing the file." });
     }
   };
-
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
@@ -312,8 +344,70 @@ function DashboardContent() {
     runGeminiOptimization();
   };
 
+  // Alphanumeric hashing function to generate cache keys safely
+  const getHash = (str: string) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = (hash << 5) - hash + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return "opt_cache_" + Math.abs(hash);
+  };
   const runGeminiOptimization = async () => {
     setApiError(null);
+    posthog.capture("optimization_started");
+    // Bypass daily limit logic during automated Playwright test runs
+    const isTesting = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("mock_auth") === "true";
+    
+    if (!isTesting) {
+      const todayStr = new Date().toISOString().split("T")[0];
+      const storedStr = localStorage.getItem("atsprime_daily_optimizations");
+      let stored = { count: 0, date: todayStr };
+      try {
+        if (storedStr) {
+          const parsed = JSON.parse(storedStr);
+          if (parsed.date === todayStr) {
+            stored = parsed;
+          }
+        }
+      } catch (e) {}
+
+      if (stored.count >= 2) {
+        setApiError("You have reached your limit of 2 free AI optimizations for today. Please try again tomorrow.");
+        return;
+      }
+    }
+
+    // Check LocalStorage Cache for identical queries
+    const cacheKey = getHash(resumeText + "|" + jobDescription);
+    try {
+      const cachedData = localStorage.getItem(cacheKey);
+      if (cachedData) {
+        console.log("Cache hit! Loading optimized resume data from local cache.");
+        setStep(3);
+        setAnalysisProgress(50);
+        setCurrentAnalysisStep(2);
+        
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        
+        const parsedData = JSON.parse(cachedData) as OptimizedData;
+        setOptimizedData(parsedData);
+        if (parsedData.originalResumeText) {
+          setResumeText(parsedData.originalResumeText);
+        }
+        
+        setAnalysisProgress(100);
+        setCurrentAnalysisStep(analysisSteps.length - 1);
+        setTimeout(() => {
+          setStep(4);
+        }, 500);
+        return;
+      }
+    } catch (e) {
+      console.warn("Failed to check or load from cache:", e);
+    }
+
     setStep(3);
     setAnalysisProgress(0);
     setCurrentAnalysisStep(0);
@@ -357,6 +451,9 @@ function DashboardContent() {
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
+        if (response.status === 429) {
+          throw new Error("RATE_LIMIT_429");
+        }
         throw new Error(errData.error?.message || `HTTP error ${response.status}`);
       }
 
@@ -373,10 +470,41 @@ function DashboardContent() {
 
       const parsedData = JSON.parse(cleanedText) as OptimizedData;
       setOptimizedData(parsedData);
+      posthog.capture("optimization_success", {
+        ats_score_original: parsedData.originalAtsScore,
+        ats_score_optimized: parsedData.optimizedAtsScore,
+        keywords_matched_count: parsedData.matchedKeywords?.length || 0,
+        keywords_inserted_count: parsedData.insertedKeywords?.length || 0,
+        bullet_diffs_count: parsedData.bulletDiffs?.length || 0
+      });
       
       // Update original resume text if returned by Gemini (extremely useful for PDF extractions)
       if (parsedData.originalResumeText) {
         setResumeText(parsedData.originalResumeText);
+      }
+
+      // Save valid optimized response to local cache
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(parsedData));
+      } catch (e) {
+        console.warn("Failed to save to local cache:", e);
+      }
+
+      // Increment daily optimization limit
+      if (!isTesting) {
+        const todayStr = new Date().toISOString().split("T")[0];
+        const storedStr = localStorage.getItem("atsprime_daily_optimizations");
+        let stored = { count: 0, date: todayStr };
+        try {
+          if (storedStr) {
+            const parsed = JSON.parse(storedStr);
+            if (parsed.date === todayStr) {
+              stored = parsed;
+            }
+          }
+        } catch (e) {}
+        stored.count += 1;
+        localStorage.setItem("atsprime_daily_optimizations", JSON.stringify(stored));
       }
       
       // Set to 100% and transition
@@ -389,7 +517,14 @@ function DashboardContent() {
     } catch (err: any) {
       clearInterval(progressInterval);
       console.error("Gemini optimization error:", err);
-      setApiError(err.message || "An unexpected error occurred during optimization.");
+      posthog.capture("optimization_failed", {
+        error: err.message || "An unexpected error occurred during optimization."
+      });
+      if (err.message === "RATE_LIMIT_429") {
+        setApiError("The AI engine is currently experiencing heavy traffic. Please wait 10 seconds and click Optimize again to retry.");
+      } else {
+        setApiError(err.message || "An unexpected error occurred during optimization.");
+      }
       setStep(2); // Go back to Job Description
     }
   };

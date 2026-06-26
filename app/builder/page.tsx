@@ -27,6 +27,7 @@ import { useAuth } from "../context/AuthContext";
 import { ResumeData, WorkExperience, EducationItem, ProjectItem, CertificateItem, AchievementItem, LanguageItem, LinkItem } from "../types/resume";
 import { templatesList, templateComponents } from "../components/resume/templates/registry";
 import TemplateGallery from "../components/resume/TemplateGallery";
+import posthog from "posthog-js";
 
 // Initial Rich Sample Data
 const initialResumeData: ResumeData = {
@@ -141,6 +142,14 @@ function BuilderContent() {
   useEffect(() => {
     setIsPro(true);
   }, []);
+
+  // Track template selections in the builder
+  useEffect(() => {
+    posthog.capture("template_selected", {
+      template_id: selectedTemplate,
+      source: "builder",
+    });
+  }, [selectedTemplate]);
 
   const toggleProSubscription = () => {
     const updatedPro = !isPro;

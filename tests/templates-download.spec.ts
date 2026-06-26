@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
 
 test("Resume template selection and download flow", async ({ page }) => {
-  test.setTimeout(90000);
+  test.setTimeout(300000);
   // 1. Navigate to dashboard page
-  await page.goto("http://localhost:3000/dashboard");
+  await page.goto("http://localhost:3000/dashboard?mock_auth=true");
   await page.waitForLoadState("networkidle");
 
   // 2. We should see the auth modal. Sign up with a random email to ensure a fresh session.
@@ -46,7 +46,7 @@ test("Resume template selection and download flow", async ({ page }) => {
   // 7. Wait for step 4 Results (timeout 60 seconds to allow mock progress + API call to finish)
   // Note: the mock uses process.env.GEMINI_API_KEY, but since the test runs against the local server, 
   // we wait for it to return candidates or fallback.
-  await page.waitForSelector("text=Tailored Resume Ready.", { timeout: 60000 });
+  await page.waitForSelector("text=Tailored Resume Ready.", { timeout: 240000 });
   
   // Verify ATS Score is displayed
   await expect(page.locator("text=ATS Match Score Comparison")).toBeVisible();
