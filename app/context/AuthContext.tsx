@@ -34,6 +34,8 @@ interface AuthContextType {
   deleteResume: (id: string) => void;
   updateProfile: (name: string, avatarUrl?: string) => Promise<{ success: boolean; error?: string }>;
   deleteAccount: () => Promise<{ success: boolean; error?: string }>;
+  verifyEmailOtp: (email: string, token: string) => Promise<{ success: boolean; error?: string }>;
+  resendSignupOtp: (email: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -676,6 +678,95 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Verify Email OTP for signup confirmation
+  const verifyEmailOtp = async (email: string, token: string): Promise<{ success: boolean; error?: string }> => {
+    if (useSupabase) {
+      try {
+        const { data, error } = await supabase.auth.verifyOtp({
+          email: email.trim().toLowerCase(),
+          token: token.trim(),
+          type: "signup",
+        });
+
+        if (error) {
+          return { success: false, error: error.message };
+        }
+
+        // If verified, set the active user context state
+        if (data.user) {
+          let name = data.user.user_metadata?.full_name || data.user.user_metadata?.name || data.user.email?.split("@")[0] || "";
+          let avatarUrl = data.user.user_metadata?.avatar_url || undefined;
+
+          try {
+            const { data: profileData } = await supabase
+              .from("profiles")
+              .select("name, avatar_url")
+              .eq("id", data.user.id)
+              .maybeSingle();
+            if (profileData) {
+              if (profileData.name) name = profileData.name;
+              if (profileData.avatar_url) avatarUrl = profileData.avatar_url;
+            }
+          } catch (e) {
+            console.warn("Could not load user profile details during OTP verification:", e);
+          }
+
+          setUser({
+            email: data.user.email || "",
+            name,
+            avatarUrl,
+          });
+        }
+
+        return { success: true };
+      } catch (err: any) {
+        return { success: false, error: err.message || "Failed to verify code." };
+      }
+    } else {
+      // Fallback: LocalStorage Mock OTP Verification (use 123456 for mock sandbox testing)
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        if (token.trim() === "123456") {
+          // Resolve mock user in local session
+          const mockUser: User = {
+            email: email.trim().toLowerCase(),
+            name: "Sandbox User",
+          };
+          localStorage.setItem("atsprime_session", JSON.stringify(mockUser));
+          setUser(mockUser);
+          return { success: true };
+        }
+        return { success: false, error: "Invalid verification code. Use 123456 for sandbox testing." };
+      } catch (err) {
+        return { success: false, error: "An unexpected error occurred during OTP verification." };
+      }
+    }
+  };
+
+  // Resend signup OTP code
+  const resendSignupOtp = async (email: string): Promise<{ success: boolean; error?: string }> => {
+    if (useSupabase) {
+      try {
+        const { error } = await supabase.auth.resend({
+          type: "signup",
+          email: email.trim().toLowerCase(),
+        });
+
+        if (error) {
+          return { success: false, error: error.message };
+        }
+
+        return { success: true };
+      } catch (err: any) {
+        return { success: false, error: err.message || "Failed to resend verification code." };
+      }
+    } else {
+      // Fallback: Mock Resend Sandbox
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      return { success: true };
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -693,6 +784,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         deleteResume,
         updateProfile,
         deleteAccount,
+        verifyEmailOtp,
+        resendSignupOtp,
       }}
     >
       {children}

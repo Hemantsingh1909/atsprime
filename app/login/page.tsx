@@ -17,6 +17,8 @@ function LoginContent() {
     signIn, 
     signInWithGoogle, 
     forgotPassword,
+    verifyEmailOtp,
+    resendSignupOtp,
     loading: authLoading,
     useSupabase
   } = useAuth();
@@ -27,8 +29,9 @@ function LoginContent() {
     redirectUrl += (redirectUrl.includes("?") ? "&" : "?") + `mock_auth=${mockAuth}`;
   }
 
-  // Auth Card States: "signin" | "signup" | "forgot"
-  const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
+  // Auth Card States: "signin" | "signup" | "forgot" | "verify"
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot" | "verify">("signin");
+  const [otpCode, setOtpCode] = useState("");
 
   useEffect(() => {
     const authParam = searchParams.get("auth");
@@ -87,16 +90,26 @@ function LoginContent() {
 
         const res = await signUp(email, password, fullName);
         if (res.success) {
-          if (mockAuth) {
-            router.push(redirectUrl);
-          } else {
-            setStatusMessage("Check your email to verify your account.");
-          }
-          // Reset fields
-          setFullName("");
-          setEmail("");
+          // Switch to OTP verification mode and preserve email
+          setMode("verify");
+          setStatusMessage("We've sent a verification code to your email. (Use 123456 for sandbox testing)");
           setPassword("");
           setConfirmPassword("");
+        } else {
+          setErrorMessage(formatError(res.error));
+        }
+      } else if (mode === "verify") {
+        setLoadingText("Verifying code...");
+        if (!otpCode.trim()) {
+          setErrorMessage("Please enter the verification code.");
+          setSubmitting(false);
+          return;
+        }
+        const res = await verifyEmailOtp(email, otpCode);
+        if (res.success) {
+          setStatusMessage("Email verified successfully! Redirecting...");
+          setLoadingText("Redirecting...");
+          router.push(redirectUrl);
         } else {
           setErrorMessage(formatError(res.error));
         }
@@ -121,6 +134,26 @@ function LoginContent() {
       }
     } catch (err) {
       setErrorMessage("Authentication process encountered an unexpected issue.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setErrorMessage("");
+    setStatusMessage("");
+    setSubmitting(true);
+    setLoadingText("Resending code...");
+
+    try {
+      const res = await resendSignupOtp(email);
+      if (res.success) {
+        setStatusMessage("A new verification code has been sent to your email.");
+      } else {
+        setErrorMessage(formatError(res.error));
+      }
+    } catch (err) {
+      setErrorMessage("Could not resend verification code.");
     } finally {
       setSubmitting(false);
     }
@@ -210,7 +243,7 @@ function LoginContent() {
         >
           {/* Header Title */}
           <div className="text-center mb-6">
-            {mode === "forgot" && (
+            {(mode === "forgot" || mode === "verify") && (
               <button 
                 onClick={() => {
                   setErrorMessage("");
@@ -228,12 +261,14 @@ function LoginContent() {
               {mode === "signin" && "Sign In to ATSPrime"}
               {mode === "signup" && "Get Started with ATSPrime"}
               {mode === "forgot" && "Reset Password"}
+              {mode === "verify" && "Verify Your Email"}
             </h2>
             
             <p className="text-zinc-400 text-xs mt-1.5 leading-relaxed">
               {mode === "signin" && "Enter your credentials to access your dashboard workspace."}
               {mode === "signup" && "Create an account to start tailoring and scoring your resumes."}
               {mode === "forgot" && "Enter your email address and we'll send you a password recovery link."}
+              {mode === "verify" && "Enter the verification code sent to your email address to complete registration."}
             </p>
           </div>
 
@@ -252,101 +287,125 @@ function LoginContent() {
 
           {/* Auth Forms */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            {mode === "signup" && (
-              <div className="space-y-1.5">
-                <label htmlFor="name-input" className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-wider block">
-                  Full Name
+            {mode === "verify" ? (
+              <div className="space-y-1.5 animate-fade-in">
+                <label htmlFor="otp-input" className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-wider block">
+                  Verification Code
                 </label>
                 <div className="relative">
-                  <User size={14} className="absolute left-3.5 top-3.5 text-zinc-600" />
+                  <Lock size={14} className="absolute left-3.5 top-3.5 text-zinc-650" />
                   <input
-                    id="name-input"
+                    id="otp-input"
                     type="text"
                     required
-                    placeholder="Alex Rivera"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Enter 6-digit code"
+                    maxLength={6}
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value)}
                     disabled={submitting}
-                    className="w-full h-10 rounded-sm bg-zinc-950 border border-hairline dark:border-zinc-800/80 focus:border-zinc-600 pl-10 pr-4 text-xs text-white placeholder-zinc-700 focus:outline-none"
+                    className="w-full h-10 rounded-sm bg-zinc-950 border border-hairline dark:border-zinc-800/80 focus:border-zinc-600 pl-10 pr-4 text-xs text-white placeholder-zinc-700 focus:outline-none tracking-widest font-mono text-center font-bold"
                   />
                 </div>
               </div>
-            )}
-
-            <div className="space-y-1.5">
-              <label htmlFor="email-input" className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-wider block">
-                Email Address
-              </label>
-              <div className="relative">
-                <Mail size={14} className="absolute left-3.5 top-3.5 text-zinc-650" />
-                <input
-                  id="email-input"
-                  type="email"
-                  required
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={submitting}
-                  className="w-full h-10 rounded-sm bg-zinc-950 border border-hairline dark:border-zinc-800/80 focus:border-zinc-600 pl-10 pr-4 text-xs text-white placeholder-zinc-700 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            {mode !== "forgot" && (
+            ) : (
               <>
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label htmlFor="password-input" className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-wider block">
-                      Password
+                {mode === "signup" && (
+                  <div className="space-y-1.5">
+                    <label htmlFor="name-input" className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-wider block">
+                      Full Name
                     </label>
-                    {mode === "signin" && (
-                      <button 
-                        type="button"
-                        onClick={() => {
-                          setErrorMessage("");
-                          setStatusMessage("");
-                          setMode("forgot");
-                        }}
-                        className="text-[10px] text-zinc-500 hover:text-zinc-300 font-mono tracking-wide"
-                      >
-                        Forgot Password?
-                      </button>
-                    )}
+                    <div className="relative">
+                      <User size={14} className="absolute left-3.5 top-3.5 text-zinc-600" />
+                      <input
+                        id="name-input"
+                        type="text"
+                        required
+                        placeholder="Alex Rivera"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        disabled={submitting}
+                        className="w-full h-10 rounded-sm bg-zinc-950 border border-hairline dark:border-zinc-800/80 focus:border-zinc-600 pl-10 pr-4 text-xs text-white placeholder-zinc-700 focus:outline-none"
+                      />
+                    </div>
                   </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <label htmlFor="email-input" className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-wider block">
+                    Email Address
+                  </label>
                   <div className="relative">
-                    <Lock size={14} className="absolute left-3.5 top-3.5 text-zinc-650" />
+                    <Mail size={14} className="absolute left-3.5 top-3.5 text-zinc-650" />
                     <input
-                      id="password-input"
-                      type="password"
+                      id="email-input"
+                      type="email"
                       required
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       disabled={submitting}
                       className="w-full h-10 rounded-sm bg-zinc-950 border border-hairline dark:border-zinc-800/80 focus:border-zinc-600 pl-10 pr-4 text-xs text-white placeholder-zinc-700 focus:outline-none"
                     />
                   </div>
                 </div>
 
-                {mode === "signup" && (
-                  <div className="space-y-1.5">
-                    <label htmlFor="confirm-password-input" className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-wider block">
-                      Confirm Password
-                    </label>
-                    <div className="relative">
-                      <Lock size={14} className="absolute left-3.5 top-3.5 text-zinc-650" />
-                      <input
-                        id="confirm-password-input"
-                        type="password"
-                        required
-                        placeholder="••••••••"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        disabled={submitting}
-                        className="w-full h-10 rounded-sm bg-zinc-950 border border-hairline dark:border-zinc-800/80 focus:border-zinc-600 pl-10 pr-4 text-xs text-white placeholder-zinc-700 focus:outline-none"
-                      />
+                {mode !== "forgot" && (
+                  <>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label htmlFor="password-input" className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-wider block">
+                          Password
+                        </label>
+                        {mode === "signin" && (
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              setErrorMessage("");
+                              setStatusMessage("");
+                              setMode("forgot");
+                            }}
+                            className="text-[10px] text-zinc-500 hover:text-zinc-300 font-mono tracking-wide"
+                          >
+                            Forgot Password?
+                          </button>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <Lock size={14} className="absolute left-3.5 top-3.5 text-zinc-650" />
+                        <input
+                          id="password-input"
+                          type="password"
+                          required
+                          placeholder="••••••••"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          disabled={submitting}
+                          className="w-full h-10 rounded-sm bg-zinc-950 border border-hairline dark:border-zinc-800/80 focus:border-zinc-600 pl-10 pr-4 text-xs text-white placeholder-zinc-700 focus:outline-none"
+                        />
+                      </div>
                     </div>
-                  </div>
+
+                    {mode === "signup" && (
+                      <div className="space-y-1.5">
+                        <label htmlFor="confirm-password-input" className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-wider block">
+                          Confirm Password
+                        </label>
+                        <div className="relative">
+                          <Lock size={14} className="absolute left-3.5 top-3.5 text-zinc-650" />
+                          <input
+                            id="confirm-password-input"
+                            type="password"
+                            required
+                            placeholder="••••••••"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            disabled={submitting}
+                            className="w-full h-10 rounded-sm bg-zinc-950 border border-hairline dark:border-zinc-800/80 focus:border-zinc-600 pl-10 pr-4 text-xs text-white placeholder-zinc-700 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </>
             )}
@@ -365,12 +424,14 @@ function LoginContent() {
                 "Create Account"
               ) : mode === "signin" ? (
                 "Sign In"
+              ) : mode === "verify" ? (
+                "Verify Code"
               ) : (
                 "Send Reset Link"
               )}
             </button>
 
-            {mode !== "forgot" && (
+            {(mode !== "forgot" && mode !== "verify") && (
               <>
                 <div className="relative flex items-center justify-center my-4">
                   <div className="absolute inset-0 flex items-center">
@@ -425,6 +486,30 @@ function LoginContent() {
               >
                 Already have an account? Sign In
               </button>
+            )}
+
+            {mode === "verify" && (
+              <div className="flex flex-col gap-3 items-center">
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={submitting}
+                  className="text-xs font-semibold text-violet hover:text-violet-soft transition-colors cursor-pointer disabled:text-zinc-600 disabled:cursor-not-allowed"
+                >
+                  Didn't receive the code? Resend Code
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setErrorMessage("");
+                    setStatusMessage("");
+                    setMode("signup");
+                  }}
+                  className="text-xs font-medium text-zinc-550 hover:text-zinc-300 transition-colors cursor-pointer"
+                >
+                  Back to Sign Up
+                </button>
+              </div>
             )}
 
             {mode === "forgot" && (
