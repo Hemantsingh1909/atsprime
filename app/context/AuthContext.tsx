@@ -519,19 +519,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (useSupabase) {
       try {
-        const { error } = await supabase.rpc("delete_current_user");
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id;
+        if (!userId) throw new Error("Could not retrieve active user session ID.");
+
+        const { error } = await supabase.rpc("delete_user_by_id", { user_id: userId });
         if (error) {
-          // If RPC fails (e.g. function does not exist), fallback to delete profiles row
-          console.warn("delete_current_user RPC failed, running fallback deletion:", error.message);
-          const { error: profileErr } = await supabase.from("profiles").delete().eq("id", user.email);
+          // If RPC fails (e.g. function does not exist), fallback to manual deletion
+          console.warn("delete_user_by_id RPC failed, running manual deletion fallback:", error.message);
+
+          // Delete from public.saved_resumes and public.profiles
+          const { error: resumesErr } = await supabase.from("saved_resumes").delete().eq("user_id", userId);
+          if (resumesErr) throw resumesErr;
+
+          const { error: profileErr } = await supabase.from("profiles").delete().eq("id", userId);
           if (profileErr) throw profileErr;
         }
         await signOut();
         return { success: true };
       } catch (err: any) {
-        console.warn("Network error during Supabase account deletion, completing local signout:", err.message || err);
-        await signOut();
-        return { success: true };
+        console.error("Error during Supabase account deletion:", err);
+        return { success: false, error: err.message || "Failed to delete account from database." };
       }
     } else {
       // Fallback: LocalStorage Mock Delete
