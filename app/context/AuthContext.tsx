@@ -63,16 +63,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUseSupabase(configured);
 
     if (configured) {
+      const loadProfileAndSetUser = async (sessionUser: any) => {
+        let name = sessionUser.user_metadata?.full_name || sessionUser.user_metadata?.name || sessionUser.email?.split("@")[0] || "";
+        let avatarUrl = sessionUser.user_metadata?.avatar_url || undefined;
+
+        try {
+          const { data, error } = await supabase
+            .from("profiles")
+            .select("name, avatar_url")
+            .eq("id", sessionUser.id)
+            .maybeSingle();
+          if (data) {
+            if (data.name) name = data.name;
+            if (data.avatar_url) avatarUrl = data.avatar_url;
+          }
+        } catch (e) {
+          console.warn("Could not load user profile details from public.profiles table:", e);
+        }
+
+        setUser({
+          email: sessionUser.email || "",
+          name,
+          avatarUrl,
+        });
+      };
+
       // Get initial session
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session?.user) {
-          setUser({
-            email: session.user.email || "",
-            name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "",
-            avatarUrl: session.user.user_metadata?.avatar_url,
-          });
+          loadProfileAndSetUser(session.user).then(() => setLoading(false));
+        } else {
+          setLoading(false);
         }
-        setLoading(false);
       });
 
       // Listen to auth changes
@@ -80,11 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data: { subscription },
       } = supabase.auth.onAuthStateChange((_event, session) => {
         if (session?.user) {
-          setUser({
-            email: session.user.email || "",
-            name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "",
-            avatarUrl: session.user.user_metadata?.avatar_url,
-          });
+          loadProfileAndSetUser(session.user);
         } else {
           setUser(null);
           setSavedResumes([]);
@@ -472,19 +490,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (useSupabase) {
       try {
+        // Clear the avatar_url in JWT metadata to prevent headers from exceeding length limits!
         const { data, error } = await supabase.auth.updateUser({
-          data: { name, avatar_url: avatarUrl },
+          data: { full_name: name, avatar_url: null },
         });
         if (error) throw error;
         
-        // Also attempt to update profiles table if it exists
-        try {
-          await supabase
+        // Also update profiles table
+        if (data.user?.id) {
+          const { error: dbErr } = await supabase
             .from("profiles")
             .update({ name, avatar_url: avatarUrl })
-            .eq("id", data.user?.id);
-        } catch (tableErr) {
-          console.error("Failed to update public.profiles row:", tableErr);
+            .eq("id", data.user.id);
+          if (dbErr) throw dbErr;
         }
 
         setUser({
