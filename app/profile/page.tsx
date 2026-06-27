@@ -21,7 +21,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 
 export default function ProfilePage() {
-  const { user, signOut, updateProfile, useSupabase } = useAuth();
+  const { user, signOut, updateProfile, useSupabase, savedResumes } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   
   const [name, setName] = useState(user?.name || "");
@@ -324,11 +324,15 @@ export default function ProfilePage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-zinc-400">Monthly Scans Used:</span>
-                  <span className="font-semibold text-white">{useSupabase ? "Unlimited" : "Unlimited (Sandbox)"}</span>
+                  <span className="font-semibold text-white">
+                    {Math.max(0, 2 - (savedResumes?.length || 0))}/2 left
+                  </span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-zinc-400">PDF Resumes Exported:</span>
-                  <span className="font-semibold text-white">{useSupabase ? "Unlimited" : "Unlimited (Sandbox)"}</span>
+                  <span className="font-semibold text-white">
+                    {Math.max(0, 2 - (savedResumes?.length || 0))}/2 left
+                  </span>
                 </div>
               </div>
             </motion.div>
