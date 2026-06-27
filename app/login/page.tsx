@@ -109,7 +109,7 @@ function LoginContent() {
         if (res.success) {
           setStatusMessage("Email verified successfully! Redirecting...");
           setLoadingText("Redirecting...");
-          router.push(redirectUrl);
+          router.push("/");
         } else {
           setErrorMessage(formatError(res.error));
         }
@@ -120,7 +120,14 @@ function LoginContent() {
           setLoadingText("Redirecting...");
           router.push(redirectUrl);
         } else {
-          setErrorMessage(formatError(res.error));
+          if (res.error && (res.error.toLowerCase().includes("email not confirmed") || res.error.toLowerCase().includes("confirmation required"))) {
+            // Unconfirmed signup: trigger OTP and move to verify mode
+            await resendSignupOtp(email);
+            setMode("verify");
+            setStatusMessage("Email confirmation required. We've sent a verification code to your email. (Use 123456 for sandbox testing)");
+          } else {
+            setErrorMessage(formatError(res.error));
+          }
         }
       } else if (mode === "forgot") {
         setLoadingText("Sending reset link...");
@@ -298,8 +305,8 @@ function LoginContent() {
                     id="otp-input"
                     type="text"
                     required
-                    placeholder="Enter 6-digit code"
-                    maxLength={6}
+                    placeholder="Enter verification code"
+                    maxLength={8}
                     value={otpCode}
                     onChange={(e) => setOtpCode(e.target.value)}
                     disabled={submitting}
