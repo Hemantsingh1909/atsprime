@@ -4,7 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   ArrowRight,
-  Play,
+  LayoutGrid,
   Sparkles,
   CheckCircle2,
 } from "lucide-react";
@@ -90,10 +90,13 @@ export default function HeroContent() {
           />
         </Link>
 
-        <button className="group inline-flex items-center justify-center gap-2 rounded-full border border-hairline px-7 py-3.5 font-medium text-zinc-900 dark:text-zinc-100 bg-canvas hover:bg-canvas-soft transition-all duration-200 shadow-sm">
-          <Play size={18} strokeWidth={2} />
-          Watch Demo
-        </button>
+        <Link
+          href="/builder?view=gallery"
+          className="group inline-flex items-center justify-center gap-2 rounded-full border border-hairline px-7 py-3.5 font-medium text-zinc-900 dark:text-zinc-100 bg-canvas hover:bg-canvas-soft transition-all duration-200 shadow-sm"
+        >
+          <LayoutGrid size={18} strokeWidth={2} />
+          Browse Templates
+        </Link>
       </motion.div>
 
       {/* Trust Indicators */}

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
@@ -130,7 +131,19 @@ const initialResumeData: ResumeData = {
 };
 
 function BuilderContent() {
-  const [viewMode, setViewMode] = useState<"editor" | "gallery">("editor");
+  const searchParams = useSearchParams();
+  const [viewMode, setViewMode] = useState<"editor" | "gallery">(
+    searchParams.get("view") === "gallery" ? "gallery" : "editor"
+  );
+
+  useEffect(() => {
+    const view = searchParams.get("view");
+    if (view === "gallery") {
+      setViewMode("gallery");
+    } else if (view === "editor") {
+      setViewMode("editor");
+    }
+  }, [searchParams]);
   const [activeTab, setActiveTab] = useState<"personal" | "summary" | "experience" | "education" | "skills" | "projects" | "achievements">("personal");
   const [selectedTemplate, setSelectedTemplate] = useState("classic");
   const [resumeData, setResumeData] = useState<ResumeData>(initialResumeData);
