@@ -112,7 +112,7 @@ export async function POST(request: Request) {
     const page = await context.newPage();
 
     // 5. Load generated HTML content and wait for network/styles to settle
-    await page.setContent(htmlContent, { waitUntil: "networkidle" });
+    await page.setContent(htmlContent, { waitUntil: "load", timeout: 10000 });
 
     // 6. Generate A4 PDF buffer (Single Page Format)
     const pdfBuffer = await page.pdf({
