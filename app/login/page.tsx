@@ -109,7 +109,7 @@ function LoginContent() {
         if (res.success) {
           setStatusMessage("Email verified successfully! Redirecting...");
           setLoadingText("Redirecting...");
-          router.push("/");
+          router.push(redirectUrl);
         } else {
           setErrorMessage(formatError(res.error));
         }
