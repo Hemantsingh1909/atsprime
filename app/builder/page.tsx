@@ -579,7 +579,7 @@ function BuilderContent() {
 
             setSavedResumeData(resumeData);
             setDownloadingPdf(false);
-            alert("Headless PDF compiler timed out. Opened browser print dialog as secure fallback (Select 'Save as PDF' to download).");
+            alert(`Headless PDF compiler failed: ${err.message}. Opened browser print dialog as secure fallback.`);
             return;
           }
         } catch (printErr) {

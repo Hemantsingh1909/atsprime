@@ -744,7 +744,7 @@ function DashboardContent() {
 
             setDownloadSuccess(true);
             setDownloadingPdf(false);
-            setApiError("Headless PDF renderer timed out. Opened browser print dialog as secure fallback (Select 'Save as PDF').");
+            setApiError(`Headless PDF compiler failed: ${err.message}. Opened browser print dialog as secure fallback.`);
             return true;
           }
         } catch (printErr) {
