@@ -208,6 +208,9 @@ function DashboardContent() {
       const savedJobDesc = sessionStorage.getItem("atsprime_dashboard_jobDescription");
       const savedOptimizedData = sessionStorage.getItem("atsprime_dashboard_optimizedData");
       const savedBase64 = sessionStorage.getItem("atsprime_dashboard_uploadedFileBase64");
+      const savedSelectedTemplate = sessionStorage.getItem("atsprime_dashboard_selectedTemplate");
+      const savedActiveResultTab = sessionStorage.getItem("atsprime_dashboard_activeResultTab");
+      const savedDiffIndex = sessionStorage.getItem("atsprime_dashboard_diffIndex");
 
       if (savedStep) {
         const parsedStep = parseInt(savedStep, 10);
@@ -221,6 +224,9 @@ function DashboardContent() {
       if (savedJobDesc) setJobDescription(savedJobDesc);
       if (savedOptimizedData) setOptimizedData(JSON.parse(savedOptimizedData));
       if (savedBase64) setUploadedFileBase64(savedBase64);
+      if (savedSelectedTemplate) setSelectedTemplate(savedSelectedTemplate as any);
+      if (savedActiveResultTab) setActiveResultTab(savedActiveResultTab as any);
+      if (savedDiffIndex) setDiffIndex(parseInt(savedDiffIndex, 10));
     } catch (e) {
       console.error("Failed to restore session state:", e);
     }
@@ -255,10 +261,13 @@ function DashboardContent() {
       } else {
         sessionStorage.removeItem("atsprime_dashboard_uploadedFileBase64");
       }
+      sessionStorage.setItem("atsprime_dashboard_selectedTemplate", selectedTemplate);
+      sessionStorage.setItem("atsprime_dashboard_activeResultTab", activeResultTab);
+      sessionStorage.setItem("atsprime_dashboard_diffIndex", String(diffIndex));
     } catch (e) {
       console.error("Failed to save session state:", e);
     }
-  }, [step, selectedFile, resumeText, jobDescription, optimizedData, uploadedFileBase64]);
+  }, [step, selectedFile, resumeText, jobDescription, optimizedData, uploadedFileBase64, selectedTemplate, activeResultTab, diffIndex]);
 
   // Auto-save resume if user is logged in and results are generated
   useEffect(() => {

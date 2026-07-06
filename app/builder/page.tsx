@@ -406,6 +406,7 @@ function BuilderContent() {
       localStorage.setItem("pending_resume_data", JSON.stringify(resumeData));
       localStorage.setItem("pending_template", selectedTemplate);
       localStorage.setItem("pending_view_mode", viewMode);
+      localStorage.setItem("pending_active_tab", activeTab);
       localStorage.setItem("pending_download_trigger", "true");
 
       const currentUrl = window.location.pathname + window.location.search;
@@ -462,6 +463,7 @@ function BuilderContent() {
     const pendingDataStr = localStorage.getItem("pending_resume_data");
     const pendingTemplate = localStorage.getItem("pending_template");
     const pendingViewMode = localStorage.getItem("pending_view_mode");
+    const pendingActiveTab = localStorage.getItem("pending_active_tab");
     const pendingDownloadTrigger = localStorage.getItem("pending_download_trigger");
 
     if (pendingDataStr) {
@@ -476,11 +478,15 @@ function BuilderContent() {
         if (pendingViewMode === "gallery" || pendingViewMode === "editor") {
           setViewMode(pendingViewMode as "gallery" | "editor");
         }
+        if (pendingActiveTab) {
+          setActiveTab(pendingActiveTab as any);
+        }
 
         // Clean up from localStorage
         localStorage.removeItem("pending_resume_data");
         localStorage.removeItem("pending_template");
         localStorage.removeItem("pending_view_mode");
+        localStorage.removeItem("pending_active_tab");
 
         if (pendingDownloadTrigger === "true" && user) {
           localStorage.removeItem("pending_download_trigger");
