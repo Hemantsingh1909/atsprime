@@ -37,18 +37,18 @@ const socialLinks = [
 
 const footerLinks = {
   product: [
-    { label: "How It Works", href: "#how-it-works" },
-    { label: "FAQ", href: "#faq" },
+    { label: "How It Works", href: "/#how-it-works" },
+    { label: "FAQ", href: "/#faq" },
   ],
   resources: [
-    { label: "ATS Guide", href: "#" },
-    { label: "Resume Templates", href: "#" },
-    { label: "Career Tips", href: "#" },
-    { label: "Blog", href: "#" },
+    { label: "ATS Guide", href: "/ats-guide" },
+    { label: "Resume Templates", href: "/templates" },
+    { label: "Career Tips", href: "/career-tips" },
+    { label: "Blog", href: "/blog" },
   ],
   company: [
-    { label: "About", href: "#" },
-    { label: "Contact", href: "#" },
+    { label: "About", href: "/about" },
+    { label: "Contact", href: "/contact" },
     { label: "Privacy", href: "/privacy" },
     { label: "Terms", href: "/terms" },
   ],

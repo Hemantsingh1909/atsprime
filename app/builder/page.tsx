@@ -145,7 +145,20 @@ function BuilderContent() {
     }
   }, [searchParams]);
   const [activeTab, setActiveTab] = useState<"personal" | "summary" | "experience" | "education" | "skills" | "projects" | "achievements">("personal");
-  const [selectedTemplate, setSelectedTemplate] = useState("classic");
+  const [selectedTemplate, setSelectedTemplate] = useState(() => {
+    const tpl = searchParams.get("template");
+    if (tpl && templatesList.some(t => t.id === tpl)) {
+      return tpl;
+    }
+    return "classic";
+  });
+
+  useEffect(() => {
+    const tpl = searchParams.get("template");
+    if (tpl && templatesList.some(t => t.id === tpl)) {
+      setSelectedTemplate(tpl);
+    }
+  }, [searchParams]);
   const [resumeData, setResumeData] = useState<ResumeData>(initialResumeData);
   const [savedResumeData, setSavedResumeData] = useState<ResumeData>(initialResumeData);
   const [isDirty, setIsDirty] = useState(false);
