@@ -465,8 +465,8 @@ function DashboardContent() {
         }
       } catch (e) {}
 
-      if (stored.count >= 2) {
-        setApiError("You have reached your limit of 2 free AI optimizations for today. Please try again tomorrow.");
+      if (stored.count >= 3) {
+        setApiError("You have reached your limit of 3 free AI optimizations for today. Please try again tomorrow.");
         return;
       }
     }

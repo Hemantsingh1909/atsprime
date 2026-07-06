@@ -2,9 +2,9 @@ import { test, expect } from "@playwright/test";
 
 test("Resume template selection and download flow", async ({ page }) => {
   test.setTimeout(300000);
-  // 1. Navigate to dashboard page
-  await page.goto("http://localhost:3000/dashboard?mock_auth=true&auth=signup");
-  await page.waitForLoadState("networkidle");
+  // 1. Navigate to dashboard page via login redirect
+  await page.goto("http://localhost:3000/login?mock_auth=true&redirect=/dashboard");
+  await page.waitForLoadState("load");
 
   // 2. We should see the auth modal. Sign up with a random email to ensure a fresh session.
   const randomEmail = `user_${Math.random().toString(36).substring(2, 11)}@dev.io`;
@@ -17,7 +17,7 @@ test("Resume template selection and download flow", async ({ page }) => {
 
   // Wait for the redirect directly to the dashboard
   await page.waitForURL((url) => url.pathname === "/dashboard");
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("load");
 
   // Wait for the auth transition to finish and see STEP 01
   await page.waitForSelector("text=STEP 01", { timeout: 10000 });

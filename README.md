@@ -4,29 +4,34 @@ Your resume's AI copilot. ATSPrime analyzes your resume against a job descriptio
 
 **Live site:** [atsprime.in](https://atsprime.in)
 
-## What it does
-
-- Upload your resume and paste a job description
-- Get an ATS compatibility score and keyword match analysis
-- Receive AI-powered suggestions to tailor your resume for the specific role
-- Export a polished, job-specific version of your resume as a PDF
-
 ## Tech Stack
-
-- **Frontend & Framework:** Next.js, TypeScript
-- **Backend/AI Logic:** Python
-- **AI Integration:** [TODO: confirm — OpenAI API?]
-- **Error Monitoring:** Sentry
-- **Testing:** Playwright (end-to-end tests)
-- **Deployment:** Vercel
+- **Frontend & Framework:** Next.js 16 (App Router), React 19, TypeScript
+- **Styling:** Tailwind CSS v4, Framer Motion
+- **Auth & Database:** Supabase
+- **AI:** Google Gemini 2.5 Flash (structured JSON output via responseSchema)
+- **Resume Parsing:** unpdf (PDF), mammoth (DOCX)
+- **Export:** docx (npm), custom PDF generation
+- **Observability:** Sentry, PostHog
+- **Testing:** Playwright (e2e + visual regression)
 
 ## Getting Started
 
-Clone the repo and install dependencies:
+Clone the repository and install dependencies:
 
 ```bash
 npm install
 ```
+
+Create a `.env.local` file from the example:
+
+```bash
+cp .env.example .env.local
+```
+
+Fill in the required values in `.env.local`:
+- `GEMINI_API_KEY`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
 Run the development server:
 
@@ -35,14 +40,6 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to view it locally.
-
-### Environment Variables
-
-Create a `.env.local` file with the required keys:
-
-```
-[TODO: list actual env vars — AI API key, Sentry DSN, etc.]
-```
 
 ## Running Tests
 

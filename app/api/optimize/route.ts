@@ -4,14 +4,6 @@ export async function POST(request: Request) {
   try {
     const { resumeText, jobDescription, uploadedFileBase64 } = await request.json();
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey || apiKey === "your_api_key_here") {
-      return NextResponse.json(
-        { error: { message: "GEMINI_API_KEY is not configured on the server. Please check your .env.local configuration." } },
-        { status: 500 }
-      );
-    }
-
     // 1. Extract PDF text if a PDF file is provided
     let activeResumeText = resumeText;
     if (uploadedFileBase64) {
@@ -81,6 +73,14 @@ export async function POST(request: Request) {
       };
 
       return NextResponse.json(simulatedResponse);
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey || apiKey === "your_api_key_here") {
+      return NextResponse.json(
+        { error: { message: "GEMINI_API_KEY is not configured on the server. Please check your .env.local configuration." } },
+        { status: 500 }
+      );
     }
 
     // 2. Shorten prompt text to save token overhead, leveraging responseSchema for structure
@@ -222,44 +222,11 @@ Return the analysis response as a single JSON object matching the provided respo
     const result = await callGemini();
 
     if (!result.ok) {
-      console.warn(`[GEMINI STATUS]: FAILED (API call failed with status ${result.status}). Using high-fidelity offline fallback simulator.`);
-      
-      const fallbackData = {
-        originalResumeText: activeResumeText,
-        tailoredResumeText: activeResumeText + "\n\n[AI Optimization complete: tailored to align with requirements]",
-        originalAtsScore: 65,
-        optimizedAtsScore: 94,
-        matchedKeywords: ["React", "JavaScript", "HTML", "CSS", "TypeScript"],
-        insertedKeywords: ["Next.js", "Tailwind CSS", "Core Web Vitals", "LCP", "Accessibility"],
-        bulletDiffs: [
-          {
-            original: "Responsible for building React components and styling with CSS.",
-            tailored: "Engineered scalable, reusable React components and styled layouts with Tailwind CSS, enhancing responsive behavior and accessibility (a11y).",
-            improvements: ["Quantified achievements", "Aligned keyword coverage for Tailwind CSS and a11y"]
-          },
-          {
-            original: "Worked on page speed performance and improved loading times.",
-            tailored: "Spearheaded front-end speed optimization projects, boosting LCP performance by 25% and reducing initial page load times.",
-            improvements: ["Added specific performance metrics (LCP)", "Enhanced action verbs"]
-          }
-        ]
-      };
-
-      const simulatedResponse = {
-        candidates: [
-          {
-            content: {
-              parts: [
-                {
-                  text: JSON.stringify(fallbackData)
-                }
-              ]
-            }
-          }
-        ]
-      };
-
-      return NextResponse.json(simulatedResponse);
+      console.error(`[GEMINI STATUS]: FAILED (API call failed with status ${result.status})`);
+      return NextResponse.json(
+        { error: { message: `AI optimization failed: ${result.error?.message || "Gemini API request failed."}` } },
+        { status: result.status || 500 }
+      );
     }
 
     console.log("[GEMINI STATUS]: SUCCESS (Successfully connected to Gemini 2.5 Flash API. Returning optimized data.)");

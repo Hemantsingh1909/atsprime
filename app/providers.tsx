@@ -25,7 +25,7 @@ const isPlaceholderKey = (key: string | undefined): boolean => {
 };
 
 if (typeof window !== "undefined") {
-  const phKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  const phKey = process.env.NEXT_PUBLIC_POSTHOG_KEY || "phc_placeholder_key_for_testing";
   (window as any).__POSTHOG_KEY__ = phKey;
   const phHost = process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com";
   

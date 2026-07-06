@@ -22,29 +22,17 @@ test("Audit landing page for errors, overflow, and capture screenshots", async (
 
   // Navigate to home page
   await page.goto("/");
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("load");
 
-  // Scroll through the page slowly to trigger lazy animations and ensure everything renders
-  await page.evaluate(async () => {
-    await new Promise<void>((resolve) => {
-      let totalHeight = 0;
-      const distance = 100;
-      const timer = setInterval(() => {
-        const scrollHeight = document.body.scrollHeight;
-        window.scrollBy(0, distance);
-        totalHeight += distance;
-
-        if (totalHeight >= scrollHeight) {
-          clearInterval(timer);
-          window.scrollTo(0, 0);
-          resolve();
-        }
-      }, 50);
-    });
+  // Scroll through the page to trigger lazy animations and ensure everything renders
+  await page.evaluate(() => {
+    window.scrollTo(0, document.body.scrollHeight);
   });
-
-  // Wait a moment for scroll recovery
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(500);
+  await page.evaluate(() => {
+    window.scrollTo(0, 0);
+  });
+  await page.waitForTimeout(500);
 
   // 1. Check for page/javascript errors
   expect(pageErrors, `Page JS errors encountered: ${pageErrors.join(", ")}`).toEqual([]);

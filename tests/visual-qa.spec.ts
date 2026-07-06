@@ -31,29 +31,17 @@ for (const width of viewports) {
 
     // Navigate to page
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
 
-    // Scroll through the page slowly to trigger lazy animations/render components
-    await page.evaluate(async () => {
-      await new Promise<void>((resolve) => {
-        let totalHeight = 0;
-        const distance = 100;
-        const timer = setInterval(() => {
-          const scrollHeight = document.body.scrollHeight;
-          window.scrollBy(0, distance);
-          totalHeight += distance;
-
-          if (totalHeight >= scrollHeight) {
-            clearInterval(timer);
-            window.scrollTo(0, 0);
-            resolve();
-          }
-        }, 50);
-      });
+    // Scroll through the page to trigger lazy animations/render components
+    await page.evaluate(() => {
+      window.scrollTo(0, document.body.scrollHeight);
     });
-
-    // Wait for scroll animations to settle
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(500);
+    await page.evaluate(() => {
+      window.scrollTo(0, 0);
+    });
+    await page.waitForTimeout(500);
 
     // 1. Check for page/javascript errors
     expect(pageErrors, `Page JS errors encountered at ${width}px: ${pageErrors.join(", ")}`).toEqual([]);

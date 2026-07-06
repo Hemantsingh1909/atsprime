@@ -109,7 +109,7 @@ export default function CTA() {
               </motion.div>
 
               <p className="mt-3.5 text-xs font-medium text-zinc-500 dark:text-zinc-400 select-none">
-                Join 10,000+ professionals using ATSPrime
+                Tailor your resume for any role, instantly.
               </p>
 
               <div className="mt-6 flex items-center gap-2.5 text-sm font-medium text-zinc-600 dark:text-zinc-400">

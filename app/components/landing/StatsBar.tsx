@@ -11,23 +11,23 @@ import {
 const stats = [
   {
     icon: Clock3,
-    value: "< 30 sec",
+    value: "Instant",
     label: "Average tailoring time",
   },
   {
     icon: FileText,
-    value: "1.2M+",
-    label: "Resumes optimized",
+    value: "ATS-Aware",
+    label: "Scoring on every resume",
   },
   {
     icon: Gauge,
-    value: "95%",
-    label: "Average ATS improvement",
+    value: "Tailored",
+    label: "Built for job seekers at scale",
   },
   {
     icon: Star,
-    value: "4.9/5",
-    label: "User satisfaction",
+    value: "Secured",
+    label: "Private and encrypted data",
   },
 ];
 
