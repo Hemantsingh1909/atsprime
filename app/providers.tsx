@@ -86,7 +86,7 @@ export function RouteProtector({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (loading) return;
 
-    const protectedPaths = ["/dashboard", "/builder", "/history", "/profile", "/settings"];
+    const protectedPaths = ["/history", "/profile", "/settings"];
     const isProtected = protectedPaths.some((path) => pathname === path || pathname.startsWith(path + "/"));
 
     if (isProtected && !user) {
@@ -95,7 +95,7 @@ export function RouteProtector({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, pathname, router]);
 
-  const protectedPaths = ["/dashboard", "/builder", "/history", "/profile", "/settings"];
+  const protectedPaths = ["/history", "/profile", "/settings"];
   const isProtected = protectedPaths.some((path) => pathname === path || pathname.startsWith(path + "/"));
 
   // Show a clean loading state or nothing while redirecting unauthenticated users

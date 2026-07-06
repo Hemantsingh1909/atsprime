@@ -226,6 +226,14 @@ function DashboardContent() {
     }
   }, []);
 
+  // Trigger pending download after user logging in
+  useEffect(() => {
+    if (user && sessionStorage.getItem("pending_dashboard_download") === "true") {
+      sessionStorage.removeItem("pending_dashboard_download");
+      handleDownload();
+    }
+  }, [user]);
+
   // Save state to sessionStorage when states change
   useEffect(() => {
     try {
@@ -595,6 +603,13 @@ function DashboardContent() {
 
   // Handle dynamic download of the tailored resume as PDF via server API
   const handleDownload = async (): Promise<boolean> => {
+    if (!user) {
+      sessionStorage.setItem("pending_dashboard_download", "true");
+      const currentUrl = window.location.pathname + window.location.search;
+      router.push(`/login?redirect=${encodeURIComponent(currentUrl)}`);
+      return false;
+    }
+
     if (!optimizedData) return false;
     setDownloadingPdf(true);
     setApiError(null);

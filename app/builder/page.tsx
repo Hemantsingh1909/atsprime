@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
@@ -132,6 +132,8 @@ const initialResumeData: ResumeData = {
 
 function BuilderContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { user } = useAuth();
   const [viewMode, setViewMode] = useState<"editor" | "gallery">(
     searchParams.get("view") === "gallery" ? "gallery" : "editor"
   );
@@ -165,6 +167,7 @@ function BuilderContent() {
   const [isPro, setIsPro] = useState(true);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [triggerDownloadAfterRestore, setTriggerDownloadAfterRestore] = useState(false);
 
   // Set isDirty to true when current resumeData differs from savedResumeData
   useEffect(() => {
@@ -399,6 +402,17 @@ function BuilderContent() {
   };
 
   const handleDownload = async () => {
+    if (!user) {
+      localStorage.setItem("pending_resume_data", JSON.stringify(resumeData));
+      localStorage.setItem("pending_template", selectedTemplate);
+      localStorage.setItem("pending_view_mode", viewMode);
+      localStorage.setItem("pending_download_trigger", "true");
+
+      const currentUrl = window.location.pathname + window.location.search;
+      router.push(`/login?redirect=${encodeURIComponent(currentUrl)}`);
+      return;
+    }
+
     if (isPremiumLocked) {
       setShowUpgradeDialog(true);
       return;
@@ -440,6 +454,52 @@ function BuilderContent() {
       setDownloadingPdf(false);
     }
   };
+
+  // Restore pending resume data from localStorage after login redirection
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const pendingDataStr = localStorage.getItem("pending_resume_data");
+    const pendingTemplate = localStorage.getItem("pending_template");
+    const pendingViewMode = localStorage.getItem("pending_view_mode");
+    const pendingDownloadTrigger = localStorage.getItem("pending_download_trigger");
+
+    if (pendingDataStr) {
+      try {
+        const parsedData = JSON.parse(pendingDataStr);
+        setResumeData(parsedData);
+        setSavedResumeData(parsedData);
+        
+        if (pendingTemplate) {
+          setSelectedTemplate(pendingTemplate);
+        }
+        if (pendingViewMode === "gallery" || pendingViewMode === "editor") {
+          setViewMode(pendingViewMode as "gallery" | "editor");
+        }
+
+        // Clean up from localStorage
+        localStorage.removeItem("pending_resume_data");
+        localStorage.removeItem("pending_template");
+        localStorage.removeItem("pending_view_mode");
+
+        if (pendingDownloadTrigger === "true" && user) {
+          localStorage.removeItem("pending_download_trigger");
+          setTriggerDownloadAfterRestore(true);
+        } else {
+          localStorage.removeItem("pending_download_trigger");
+        }
+      } catch (e) {
+        console.error("Failed to restore pending resume data", e);
+      }
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (triggerDownloadAfterRestore && user) {
+      setTriggerDownloadAfterRestore(false);
+      handleDownload();
+    }
+  }, [triggerDownloadAfterRestore, user]);
 
   const ActiveTemplate = templateComponents[selectedTemplate] || templateComponents.classic;
 
