@@ -37,9 +37,8 @@ const socialLinks = [
 
 const footerLinks = {
   product: [
-    { label: "Features", href: "#features" },
+    { label: "How It Works", href: "#how-it-works" },
     { label: "FAQ", href: "#faq" },
-    { label: "Roadmap", href: "#" },
   ],
   resources: [
     { label: "ATS Guide", href: "#" },

@@ -18,10 +18,6 @@ const navItems = [
     href: "/#how-it-works",
   },
   {
-    title: "Features",
-    href: "/#features",
-  },
-  {
     title: "FAQ",
     href: "/#faq",
   },
