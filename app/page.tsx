@@ -5,7 +5,6 @@ import { useLenis } from "lenis/react";
 import Navbar from "./components/landing/Navbar";
 import Hero from "./components/landing/hero/Hero";
 import HowItWorks from "./components/landing/HowItWorks";
-import Features from "./components/landing/features/Features";
 import CTA from "./components/landing/CTA";
 import FAQ from "./components/landing/faq/FAQ";
 import Footer from "./components/landing/footer/Footer";
@@ -33,7 +32,6 @@ export default function Home() {
       <Navbar />
       <Hero />
       <HowItWorks />
-      <Features />
       <FAQ />
       <CTA />
       <Footer />
