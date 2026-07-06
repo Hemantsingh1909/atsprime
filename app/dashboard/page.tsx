@@ -835,14 +835,14 @@ function DashboardContent() {
               className="w-full max-w-xl mx-auto"
             >
               <div className="text-center mb-8">
-                <span className="font-mono text-xs text-violet font-semibold uppercase tracking-widest">
-                  STEP 01
+                <span className="font-mono text-[10px] tracking-wider text-zinc-500 uppercase">
+                  Step 01
                 </span>
-                <h1 className="text-3xl font-bold tracking-tight text-white mt-3">
-                  Upload your base resume.
+                <h1 className="text-2xl font-medium tracking-tight text-white mt-2">
+                  Upload your base resume
                 </h1>
-                <p className="text-zinc-400 text-sm mt-2">
-                  Upload once. Our AI extracts your core experiences to build optimized matches.
+                <p className="text-zinc-400 text-sm mt-1.5">
+                  Our AI extracts your experiences to match job requirements.
                 </p>
               </div>
 
@@ -852,13 +852,13 @@ function DashboardContent() {
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
                 className={`
-                  border-2 border-dashed rounded-lg p-10 text-center cursor-pointer transition-all duration-300
+                  border border-dashed rounded-md p-10 text-center cursor-pointer transition-all duration-200
                   ${
                     isDragging
-                      ? "border-violet bg-violet/5 scale-[1.01]"
+                      ? "border-violet bg-violet/5"
                       : selectedFile
-                      ? "border-emerald-500/50 bg-emerald-500/[0.02]"
-                      : "border-zinc-800 bg-canvas hover:border-zinc-700"
+                      ? "border-emerald-500/30 bg-emerald-500/[0.02]"
+                      : "border-hairline bg-canvas hover:border-zinc-800"
                   }
                 `}
               >
@@ -872,81 +872,52 @@ function DashboardContent() {
 
                 <div className="flex flex-col items-center justify-center gap-4">
                   {selectedFile ? (
-                    <div className="h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400">
-                      <FileCheck size={24} />
-                    </div>
-                  ) : (
-                    <div className="h-12 w-12 rounded-full bg-zinc-900 border border-hairline flex items-center justify-center text-zinc-400">
-                      <Upload size={20} />
-                    </div>
-                  )}
-
-                  {selectedFile ? (
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-sm font-semibold text-white">
-                          {selectedFile.name}
-                        </p>
-                        <p className="text-xs text-zinc-400 mt-1">
-                          {selectedFile.size} • Ready for tailoring
-                        </p>
-                        <p className="text-[11px] text-zinc-500 mt-2 max-w-[280px] mx-auto leading-normal">
-                          Wrong resume? You can click the button below or drag a new file here to choose a different resume to upload.
-                        </p>
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="h-10 w-10 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                        <FileCheck size={20} />
                       </div>
+                      <p className="text-sm font-medium text-white">{selectedFile.name}</p>
+                      <p className="text-xs text-zinc-500 font-mono">{selectedFile.size}</p>
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           fileInputRef.current?.click();
                         }}
-                        className="px-3.5 py-2 text-xs font-semibold border border-zinc-700 bg-zinc-900/60 hover:bg-zinc-900 hover:border-zinc-500 rounded-sm text-zinc-200 transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                        className="mt-2 text-xs text-zinc-400 hover:text-white underline cursor-pointer"
                       >
-                        <RefreshCw size={12} className="text-violet-400" />
-                        Choose a new resume
+                        Choose a different file
                       </button>
                     </div>
                   ) : (
-                    <div>
-                      <p className="text-sm font-medium text-zinc-200">
-                        Drag & drop your resume file here
-                      </p>
-                      <p className="text-xs text-zinc-500 mt-1.5">
-                        Supports PDF, DOCX, or TXT up to 5MB
-                      </p>
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-zinc-900 border border-hairline flex items-center justify-center text-zinc-400">
+                        <Upload size={18} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-zinc-200">
+                          Drag and drop your resume
+                        </p>
+                        <p className="text-xs text-zinc-500 mt-1 font-mono">
+                          PDF, DOCX, or TXT (max 5MB)
+                        </p>
+                      </div>
                     </div>
-                  )}
-
-                  {!selectedFile && (
-                    <button
-                      type="button"
-                      className="mt-2 px-4 py-1.5 text-xs font-semibold bg-zinc-900 hover:bg-zinc-850 border border-hairline rounded-sm transition-colors cursor-pointer text-zinc-200"
-                    >
-                      Browse Files
-                    </button>
                   )}
                 </div>
               </div>
 
-              {/* Sample resume helper */}
+              {/* Sample resume helper link */}
               {!selectedFile && (
-                <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-lg bg-zinc-950 border border-hairline">
-                  <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 bg-violet-500/10 border border-violet-500/20 text-violet-400 rounded flex items-center justify-center">
-                      <FileText size={18} />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-xs font-bold text-white">No resume file on hand?</p>
-                      <p className="text-[11px] text-zinc-500">Test the tailoring engine using our high-fidelity sample.</p>
-                    </div>
-                  </div>
+                <p className="text-xs text-zinc-500 mt-4 text-center">
+                  No resume on hand?{" "}
                   <button
                     onClick={useSampleData}
-                    className="w-full sm:w-auto px-4 py-1.5 text-xs font-bold bg-violet hover:bg-violet-deep text-white rounded-sm transition-colors cursor-pointer"
+                    className="text-violet hover:text-violet-soft font-medium underline cursor-pointer"
                   >
-                    Use Sample Resume
+                    Use our sample resume
                   </button>
-                </div>
+                </p>
               )}
 
               {/* Action buttons */}
@@ -959,10 +930,10 @@ function DashboardContent() {
                   <button
                     onClick={() => setStep(2)}
                     disabled={isParsing}
-                    className="group inline-flex items-center justify-center gap-2 rounded-full bg-primary hover:bg-zinc-100 px-6 py-2.5 text-sm font-semibold text-on-primary transition-all duration-200 cursor-pointer shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="group inline-flex items-center justify-center gap-2 rounded-full bg-white hover:opacity-90 px-6 py-2.5 text-sm font-medium text-black transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isParsing ? "Parsing Resume..." : "Continue to Job Description"}
-                    {!isParsing && <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />}
+                    {!isParsing && <ArrowRight size={15} />}
                   </button>
                 </motion.div>
               )}
@@ -976,25 +947,23 @@ function DashboardContent() {
                     </h3>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-3">
+                  <div className="grid grid-cols-1 gap-2">
                     {savedResumes.map((res) => (
                       <div
                         key={res.id}
-                        className="flex items-center justify-between p-4 rounded-lg bg-canvas border border-hairline shadow-sm hover:border-zinc-800 transition-all duration-200"
+                        className="flex items-center justify-between py-3 border-b border-hairline/40 hover:border-zinc-800 transition-colors"
                       >
                         <div className="flex items-center gap-3 overflow-hidden text-left">
-                          <div className="h-9 w-9 bg-violet-500/10 border border-violet-500/20 text-violet-400 rounded flex items-center justify-center flex-shrink-0">
-                            <FileText size={18} />
-                          </div>
+                          <FileText size={14} className="text-zinc-500 flex-shrink-0" />
                           <div className="overflow-hidden">
-                            <p className="text-xs font-bold text-white truncate">{res.jobTitle}</p>
-                            <p className="text-[10px] text-zinc-500 mt-0.5">
+                            <p className="text-xs font-medium text-zinc-300 truncate">{res.jobTitle}</p>
+                            <p className="text-[10px] text-zinc-500 font-mono mt-0.5">
                               Tailored {res.createdAt} • Score: <span className="text-violet font-semibold">{res.score}</span>
                             </p>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-shrink-0">
                           <button
                             onClick={() => {
                               setResumeText(res.originalText);
@@ -1013,7 +982,7 @@ function DashboardContent() {
                               setHasSavedThisRun(true);
                               setDownloadSuccess(false);
                             }}
-                            className="px-3 py-1.5 text-[11px] font-semibold bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-hairline rounded-sm transition-colors cursor-pointer"
+                            className="px-3 py-1 text-[11px] font-medium bg-zinc-950 border border-hairline hover:bg-zinc-900 rounded-sm transition-colors cursor-pointer text-zinc-300"
                           >
                             View
                           </button>
@@ -1045,36 +1014,30 @@ function DashboardContent() {
               className="w-full max-w-xl mx-auto"
             >
               <div className="text-center mb-8">
-                <span className="font-mono text-xs text-violet font-semibold uppercase tracking-widest">
-                  STEP 02
+                <span className="font-mono text-[10px] tracking-wider text-zinc-500 uppercase">
+                  Step 02
                 </span>
-                <h1 className="text-3xl font-bold tracking-tight text-white mt-3">
-                  Paste the Target Job.
+                <h1 className="text-2xl font-medium tracking-tight text-white mt-2">
+                  Paste the Target Job
                 </h1>
-                <p className="text-zinc-400 text-sm mt-2">
-                  Paste the job posting to align your keywords, impact metrics, and skills dynamically.
+                <p className="text-zinc-400 text-sm mt-1.5">
+                  Paste the job description to align your resume with parser criteria.
                 </p>
               </div>
 
               <div className="rounded-lg border border-hairline bg-canvas p-6 space-y-4">
                 {selectedFile && (
-                  <div className="flex items-center justify-between p-3.5 rounded-lg bg-zinc-950/60 border border-hairline text-xs">
-                    <div className="flex items-center gap-2.5 truncate">
-                      <FileCheck size={14} className="text-emerald-450 flex-shrink-0" />
+                  <div className="flex items-center justify-between py-2 border-b border-hairline text-xs">
+                    <div className="flex items-center gap-2 truncate">
+                      <FileCheck size={13} className="text-emerald-400" />
                       <span className="text-zinc-500 font-mono text-[10px] uppercase tracking-wider font-semibold">Active Resume:</span>
-                      <span className="truncate font-medium text-white">{selectedFile.name}</span>
+                      <span className="truncate text-zinc-300 font-medium">{selectedFile.name}</span>
                     </div>
                     <button
                       type="button"
-                      onClick={() => {
-                        setStep(1);
-                        setTimeout(() => {
-                          fileInputRef.current?.click();
-                        }, 150);
-                      }}
-                      className="text-violet hover:text-violet-soft font-semibold transition-colors flex items-center gap-1.5 cursor-pointer ml-3 flex-shrink-0 text-xs"
+                      onClick={() => setStep(1)}
+                      className="text-violet hover:text-violet-soft font-semibold transition-colors cursor-pointer text-xs underline"
                     >
-                      <RefreshCw size={12} />
                       Change
                     </button>
                   </div>
@@ -1083,11 +1046,12 @@ function DashboardContent() {
                 {apiError && (
                   <div className="p-3 rounded bg-red-500/10 border border-red-500/20 text-xs text-red-400 flex items-center justify-between">
                     <span>{apiError}</span>
-                    <button onClick={() => setApiError(null)} className="text-zinc-500 hover:text-zinc-300 font-semibold ml-2 cursor-pointer">
+                    <button onClick={() => setApiError(null)} className="text-zinc-400 hover:text-zinc-300 font-semibold ml-2 cursor-pointer">
                       ✕
                     </button>
                   </div>
                 )}
+
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-zinc-300 font-semibold text-sm">
                     <Briefcase size={16} className="text-violet" />
@@ -1106,7 +1070,7 @@ function DashboardContent() {
                   value={jobDescription}
                   onChange={(e) => setJobDescription(e.target.value)}
                   placeholder="Paste the job requirements, responsibilities, or description here..."
-                  className="w-full min-h-[220px] rounded-sm bg-zinc-950 border border-hairline focus:border-hairline-strong p-4 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none resize-y font-sans leading-relaxed"
+                  className="w-full min-h-[220px] rounded-sm bg-zinc-950 border border-hairline focus:border-hairline-strong p-4 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none resize-y font-sans leading-relaxed"
                 />
 
                 <div className="flex items-center justify-between pt-2">
@@ -1123,16 +1087,16 @@ function DashboardContent() {
                     onClick={startAnalysis}
                     disabled={!jobDescription.trim()}
                     className={`
-                      group inline-flex items-center justify-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold shadow-md transition-all duration-200 cursor-pointer
+                      group inline-flex items-center justify-center gap-2 rounded-full px-6 py-2.5 text-sm font-medium shadow-md transition-all duration-200 cursor-pointer
                       ${
                         jobDescription.trim()
-                          ? "bg-violet hover:bg-violet-deep text-white"
+                          ? "bg-white text-black hover:opacity-90"
                           : "bg-zinc-800 text-zinc-500 border border-zinc-900 opacity-50 cursor-not-allowed"
                       }
                     `}
                   >
-                    Optimize & Tailor Resume
-                    <Sparkles size={15} className="group-hover:rotate-12 transition-transform" />
+                    Optimize Resume
+                    <Sparkles size={14} />
                   </button>
                 </div>
               </div>
@@ -1148,65 +1112,40 @@ function DashboardContent() {
               exit={{ opacity: 0, scale: 0.98 }}
               className="w-full max-w-md mx-auto text-center py-8"
             >
-              <div className="relative inline-flex items-center justify-center h-28 w-28 rounded-full mb-8">
+              <div className="relative inline-flex items-center justify-center h-20 w-20 rounded-full mb-8">
                 <div className="absolute inset-0 rounded-full border-4 border-zinc-900" />
                 <motion.div
                   className="absolute inset-0 rounded-full border-4 border-transparent border-t-violet border-r-highlight-pink"
                   animate={{ rotate: 360 }}
                   transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
                 />
-                <Sparkles size={32} className="text-violet animate-pulse" />
+                <Sparkles size={24} className="text-violet animate-pulse" />
               </div>
 
               <span className="font-mono text-[10px] text-zinc-500 font-medium tracking-widest block uppercase">
-                TAILORING ENGINE
+                Tailoring Engine
               </span>
               
-              <h2 className="text-2xl font-bold text-white mt-3">
+              <h2 className="text-xl font-medium text-white mt-3">
                 Applying AI Optimization
               </h2>
               
-              <div className="mt-8 bg-zinc-950 border border-hairline rounded-lg p-5 text-left max-w-sm mx-auto shadow-level-3">
-                <div className="flex items-center justify-between mb-4 pb-2 border-b border-hairline">
-                  <span className="text-xs font-bold text-zinc-400">Optimization Progress</span>
-                  <span className="text-xs font-mono font-bold text-violet">{analysisProgress}%</span>
+              <div className="mt-8 bg-canvas border border-hairline rounded-md p-6 max-w-sm mx-auto shadow-level-3">
+                <div className="flex items-center justify-between mb-3 text-xs font-mono">
+                  <span className="text-zinc-500 uppercase tracking-wider">Progress</span>
+                  <span className="text-violet font-semibold">{analysisProgress}%</span>
                 </div>
                 
-                <div className="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden mb-6">
+                <div className="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden mb-4">
                   <motion.div
                     className="h-full bg-gradient-to-r from-violet to-highlight-pink"
                     style={{ width: `${analysisProgress}%` }}
                   />
                 </div>
 
-                <div className="space-y-3 font-mono text-[11px] leading-relaxed">
-                  {analysisSteps.map((stepText, idx) => {
-                    const isCompleted = idx < currentAnalysisStep;
-                    const isCurrent = idx === currentAnalysisStep;
-                    
-                    return (
-                      <div
-                        key={idx}
-                        className={`flex items-start gap-2.5 transition-all duration-200 ${
-                          isCompleted
-                            ? "text-zinc-500"
-                            : isCurrent
-                            ? "text-violet font-semibold"
-                            : "text-zinc-800"
-                        }`}
-                      >
-                        {isCompleted ? (
-                          <span className="text-emerald-500 flex-shrink-0">✓</span>
-                        ) : isCurrent ? (
-                          <span className="text-violet flex-shrink-0 animate-pulse">●</span>
-                        ) : (
-                          <span className="text-zinc-800 flex-shrink-0">○</span>
-                        )}
-                        <span>{stepText}</span>
-                      </div>
-                    );
-                  })}
-                </div>
+                <p className="text-xs text-zinc-300 font-mono animate-pulse min-h-[32px] flex items-center justify-center text-center">
+                  {analysisSteps[currentAnalysisStep]}
+                </p>
               </div>
             </motion.div>
           )}
@@ -1221,43 +1160,43 @@ function DashboardContent() {
               className="space-y-8"
             >
               {/* Header section with actions */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-hairline pb-8">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-hairline pb-6">
                 <div className="text-left">
-                  <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-3 py-1 text-xs font-semibold">
-                    <CheckCircle2 size={13} strokeWidth={2} />
-                    {user ? "Saved to your Profile history" : "Resume Successfully Optimized"}
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2.5 py-0.5 text-[11px] font-medium">
+                    <CheckCircle2 size={12} />
+                    {user ? "Saved to profile" : "Resume Optimized"}
                   </div>
-                  <h1 className="text-3xl font-semibold tracking-tight text-white mt-4">
-                    Tailored Resume Ready.
+                  <h1 className="text-2xl font-medium tracking-tight text-white mt-3">
+                    Tailored Resume Ready
                   </h1>
                   <p className="text-zinc-400 text-sm mt-1">
-                    Compare matching metrics and download your final tailored resume document.
+                    Review ATS score gains and download your tailored resume.
                   </p>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <button
                     onClick={() => setStep(2)}
-                    className="px-5 py-2.5 text-sm font-semibold bg-zinc-900 border border-hairline rounded-sm hover:bg-zinc-850 transition-colors cursor-pointer text-zinc-300 flex items-center gap-2 group"
+                    className="px-4 py-2 text-xs font-medium bg-zinc-950 border border-hairline rounded-sm hover:bg-zinc-900 transition-colors cursor-pointer text-zinc-300 flex items-center gap-1.5"
                   >
-                    <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" />
+                    <ArrowLeft size={12} />
                     Back
                   </button>
 
                   <button
                     onClick={resetFlow}
-                    className="px-5 py-2.5 text-sm font-semibold bg-zinc-900 border border-hairline rounded-sm hover:bg-zinc-850 transition-colors cursor-pointer text-zinc-300 flex items-center gap-2"
+                    className="px-4 py-2 text-xs font-medium bg-zinc-950 border border-hairline rounded-sm hover:bg-zinc-900 transition-colors cursor-pointer text-zinc-300 flex items-center gap-1.5"
                   >
-                    <RefreshCw size={14} />
+                    <RefreshCw size={12} />
                     Start Over
                   </button>
 
                   <button
                     onClick={() => setActiveResultTab("preview")}
-                    className="group px-6 py-2.5 text-sm font-semibold bg-violet hover:bg-violet-deep text-white rounded-sm shadow-level-3 transition-colors cursor-pointer flex items-center gap-2"
+                    className="group px-4.5 py-2 text-xs font-medium bg-white hover:opacity-90 text-black rounded-full transition-all cursor-pointer flex items-center gap-1.5"
                   >
-                    Download PDF / Preview
-                    <Download size={15} className="group-hover:translate-y-0.5 transition-transform" />
+                    Download PDF
+                    <Download size={13} />
                   </button>
                 </div>
               </div>
@@ -1269,193 +1208,74 @@ function DashboardContent() {
                 <div className="lg:col-span-4 space-y-6">
                   
                   {/* ATS Score widget */}
-                  <div className="rounded-lg border border-hairline bg-canvas p-6 text-center shadow-level-3">
-                    <h3 className="text-xs font-mono text-zinc-500 uppercase tracking-wider mb-6 text-left">
-                      ATS Match Score Comparison
+                  <div className="rounded-lg border border-hairline bg-canvas p-6 text-left shadow-level-2">
+                    <h3 className="text-xs font-mono text-zinc-500 uppercase tracking-wider mb-4">
+                      ATS Score Compatibility
                     </h3>
-
-                    <div className="flex items-center justify-around gap-4">
-                      {/* Original Score */}
-                      <div className="flex flex-col items-center">
-                        <div className="relative flex items-center justify-center">
-                          <svg className="w-16 h-16 transform -rotate-90">
-                            <circle
-                              cx="32"
-                              cy="32"
-                              r="24"
-                              className="stroke-zinc-900"
-                              strokeWidth="5"
-                              fill="transparent"
-                            />
-                            <circle
-                              cx="32"
-                              cy="32"
-                              r="24"
-                              className="stroke-zinc-700"
-                              strokeWidth="5"
-                              fill="transparent"
-                              strokeDasharray={150.8}
-                              strokeDashoffset={150.8 - ((optimizedData?.originalAtsScore ?? 72) / 100) * 150.8}
-                              strokeLinecap="round"
-                            />
-                          </svg>
-                          <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <span className="text-sm font-bold text-zinc-400">
-                              {optimizedData?.originalAtsScore ?? 72}
-                            </span>
-                          </div>
-                        </div>
-                        <span className="text-[9px] text-zinc-500 font-mono mt-2 font-bold tracking-wider">
-                          ORIGINAL
-                        </span>
-                      </div>
-
-                      {/* Arrow connector */}
-                      <div className="flex flex-col items-center justify-center">
-                        <div className="h-8 w-8 rounded-full bg-zinc-900 border border-hairline flex items-center justify-center text-zinc-555">
-                          <TrendingUp size={14} className="text-violet animate-pulse" />
-                        </div>
-                        <span className="text-[10px] text-emerald-400 font-mono mt-1 font-bold">
-                          +{(optimizedData?.optimizedAtsScore ?? 95) - (optimizedData?.originalAtsScore ?? 72)}
-                        </span>
-                      </div>
-
-                      {/* Optimized Score */}
-                      <div className="flex flex-col items-center">
-                        <div className="relative flex items-center justify-center">
-                          <svg className="w-24 h-24 transform -rotate-90">
-                            <circle
-                              cx="48"
-                              cy="48"
-                              r="38"
-                              className="stroke-zinc-900"
-                              strokeWidth="7"
-                              fill="transparent"
-                            />
-                            <motion.circle
-                              cx="48"
-                              cy="48"
-                              r="38"
-                              className="stroke-violet"
-                              strokeWidth="7"
-                              fill="transparent"
-                              strokeDasharray={238.76}
-                              initial={{ strokeDashoffset: 238.76 }}
-                              animate={{ strokeDashoffset: 238.76 - ((optimizedData?.optimizedAtsScore ?? 95) / 100) * 238.76 }}
-                              transition={{ duration: 1.2, ease: "easeOut" }}
-                              strokeLinecap="round"
-                            />
-                          </svg>
-                          <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <span className="text-2xl font-black text-white bg-gradient-to-r from-violet to-highlight-pink bg-clip-text text-transparent">
-                              {optimizedData?.optimizedAtsScore ?? 95}
-                            </span>
-                            <span className="text-[8px] text-zinc-500 font-mono font-medium -mt-1">/ 100</span>
-                          </div>
-                        </div>
-                        <span className="text-[9px] text-violet font-mono mt-2 font-bold tracking-wider animate-pulse">
-                          OPTIMIZED
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Performance Statement */}
-                    <div className="mt-6 text-left p-3.5 rounded-lg bg-zinc-950 border border-hairline flex items-start gap-3">
-                      <div className="h-5 w-5 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <CheckCircle2 size={12} strokeWidth={2.5} />
-                      </div>
-                      <div className="space-y-0.5">
-                        <h4 className="text-[11px] font-bold text-white leading-none">High ATS Compatibility</h4>
-                        <p className="text-[10px] text-zinc-450 leading-normal font-medium">
-                          Your resume matches {(optimizedData?.matchedKeywords?.length ?? 15) + (optimizedData?.insertedKeywords?.length ?? 5)} job requirements, ranking in the top 5% of candidate compatibility templates.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Skills Match Card */}
-                  <div className="rounded-lg border border-hairline bg-canvas p-6 space-y-5 shadow-level-3">
-                    <h3 className="text-xs font-mono text-zinc-500 uppercase tracking-wider text-left">
-                      Target Keyword Analysis
-                    </h3>
-
-                    {/* Stacked Progress Bar */}
-                    <div className="space-y-2 text-left">
-                      <div className="flex justify-between items-center text-[10px] font-mono text-zinc-400 font-bold uppercase">
-                        <span>Requirement Coverage</span>
-                        <span className="text-white">{(optimizedData?.matchedKeywords?.length ?? 15) + (optimizedData?.insertedKeywords?.length ?? 5)} Matched</span>
-                      </div>
-                      <div className="h-2 w-full bg-zinc-900 rounded-full overflow-hidden flex">
-                        <div className="h-full bg-emerald-500" style={{ width: `${Math.round(((optimizedData?.matchedKeywords?.length ?? 15) / ((optimizedData?.matchedKeywords?.length ?? 15) + (optimizedData?.insertedKeywords?.length ?? 5) + 2)) * 100)}%` }} />
-                        <div className="h-full bg-violet" style={{ width: `${Math.round(((optimizedData?.insertedKeywords?.length ?? 5) / ((optimizedData?.matchedKeywords?.length ?? 15) + (optimizedData?.insertedKeywords?.length ?? 5) + 2)) * 100)}%` }} />
-                      </div>
-                      <div className="flex items-center gap-4 text-[9px] font-mono text-zinc-500 font-medium">
-                        <div className="flex items-center gap-1">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                          <span>{optimizedData?.matchedKeywords?.length ?? 15} Matched</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="h-1.5 w-1.5 rounded-full bg-violet" />
-                          <span>{optimizedData?.insertedKeywords?.length ?? 5} AI-Optimized</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4 text-left border-t border-hairline pt-4">
-                      {/* Keyword list */}
-                      <div>
-                        <span className="text-[10px] font-mono text-zinc-400 block mb-2 font-bold uppercase tracking-wider">
-                          Matched Job Requirements ({optimizedData?.matchedKeywords?.length ?? 15})
-                        </span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {(optimizedData?.matchedKeywords ?? ["React", "TypeScript", "Tailwind CSS", "API integrations", "Responsive layouts", "Web optimization", "Visual polish"]).map((kw) => (
-                            <span key={kw} className="inline-flex items-center gap-1 text-[10px] bg-emerald-500/[0.03] border border-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded font-medium">
-                              <span className="text-[8px]">✓</span> {kw}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Missing Keywords optimized */}
-                      <div>
-                        <span className="text-[10px] font-mono text-violet block mb-2 font-bold uppercase tracking-wider">
-                          Optimized Keywords Inserted ({optimizedData?.insertedKeywords?.length ?? 5})
-                        </span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {(optimizedData?.insertedKeywords ?? ["Next.js", "Core Web Vitals", "GraphQL", "Bundle-splitting", "a11y / accessibility"]).map((kw) => (
-                            <span key={kw} className="inline-flex items-center gap-1 text-[10px] bg-violet/5 border border-violet/10 text-violet-400 px-2 py-0.5 rounded font-semibold">
-                              <span className="text-[8px]">+</span> {kw}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Formatting checklist */}
-                  <div className="rounded-lg border border-hairline bg-canvas p-6 space-y-4 text-left shadow-level-3">
-                    <h3 className="text-xs font-mono text-zinc-500 uppercase tracking-wider">
-                      ATS Compliance Check
-                    </h3>
-                    
                     <div className="space-y-4">
-                      {[
-                        { text: "Contact Information Structure", desc: "Verified parser accessibility of email, phone, and links.", status: true },
-                        { text: "Parser Layout Compatibility", desc: "No nested text boxes, graphics, or custom columns found.", status: true },
-                        { text: "Date & Timeline Formats", desc: "Parsed dates standardized to unified chronological structures.", status: true },
-                        { text: "Font & Hierarchy Standard", desc: "Normalized typography to standard sans-serif configurations.", status: true },
-                        { text: "Skills Matrix Layout", desc: "Matched core skill definitions with recruiter keywords.", status: true },
-                      ].map((item, idx) => (
-                        <div key={idx} className="flex items-start gap-3">
-                          <div className="h-5 w-5 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <CheckCircle2 size={12} strokeWidth={2.5} />
-                          </div>
-                          <div className="space-y-0.5">
-                            <span className="text-xs font-bold text-white block leading-none">{item.text}</span>
-                            <span className="text-[10px] text-zinc-500 font-medium leading-normal">{item.desc}</span>
-                          </div>
+                      <div>
+                        <div className="flex justify-between text-xs mb-1.5 font-mono">
+                          <span className="text-zinc-500">Before Optimization</span>
+                          <span className="text-zinc-400 font-semibold">{optimizedData?.originalAtsScore ?? 72}%</span>
                         </div>
-                      ))}
+                        <div className="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden">
+                          <div className="h-full bg-zinc-700" style={{ width: `${optimizedData?.originalAtsScore ?? 72}%` }} />
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between text-xs mb-1.5 font-mono">
+                          <span className="text-zinc-400">AI Tailored Result</span>
+                          <span className="text-white font-semibold flex items-center gap-1.5">
+                            {optimizedData?.optimizedAtsScore ?? 95}%
+                            <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 px-1 py-0.2 rounded-sm">
+                              +{(optimizedData?.optimizedAtsScore ?? 95) - (optimizedData?.originalAtsScore ?? 72)}%
+                            </span>
+                          </span>
+                        </div>
+                        <div className="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden">
+                          <div className="h-full bg-gradient-to-r from-violet to-highlight-pink" style={{ width: `${optimizedData?.optimizedAtsScore ?? 95}%` }} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Keywords Optimization widget */}
+                  <div className="rounded-lg border border-hairline bg-canvas p-6 space-y-4 shadow-level-2">
+                    <h3 className="text-xs font-mono text-zinc-500 uppercase tracking-wider">
+                      Keywords Optimization
+                    </h3>
+                    <div className="space-y-3">
+                      <div>
+                        <span className="text-[10px] font-mono text-emerald-400 block mb-1.5 uppercase tracking-wider">
+                          Matched ({optimizedData?.matchedKeywords?.length ?? 15})
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {(optimizedData?.matchedKeywords?.slice(0, 8) ?? ["React", "TypeScript", "Tailwind CSS", "API integrations", "Responsive layouts", "Web optimization", "Visual polish"]).map((kw) => (
+                            <span key={kw} className="text-[10px] bg-emerald-500/[0.03] border border-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded-sm">
+                              {kw}
+                            </span>
+                          ))}
+                          {(optimizedData?.matchedKeywords?.length ?? 15) > 8 && (
+                            <span className="text-[9px] text-zinc-500 font-mono pt-0.5 px-1">
+                              +{optimizedData!.matchedKeywords!.length - 8} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="border-t border-hairline pt-3">
+                        <span className="text-[10px] font-mono text-violet block mb-1.5 uppercase tracking-wider">
+                          AI-Inserted ({optimizedData?.insertedKeywords?.length ?? 5})
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {(optimizedData?.insertedKeywords ?? ["Next.js", "Core Web Vitals", "GraphQL", "Bundle-splitting", "a11y / accessibility"]).map((kw) => (
+                            <span key={kw} className="text-[10px] bg-violet/5 border border-violet/10 text-violet px-1.5 py-0.5 rounded-sm font-medium">
+                              +{kw}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1512,76 +1332,51 @@ function DashboardContent() {
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: 5 }}
                           transition={{ duration: 0.2 }}
-                          className="flex flex-col h-full"
+                          className="p-6 space-y-6 flex-1 flex flex-col justify-between"
                         >
-                          <div className="p-6 space-y-6 flex-1 text-left">
-                            {/* Before and After Side-by-Side Diff */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                              {/* Original */}
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                  <div className="h-5 w-5 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
-                                    <X size={11} strokeWidth={2.5} />
-                                  </div>
-                                  <span className="text-[10px] font-mono font-bold text-red-400 uppercase tracking-wider">
-                                    Original Bullet Point
-                                  </span>
-                                </div>
-                                <div className="p-4 rounded bg-red-500/[0.01] border border-red-500/10 text-xs text-zinc-400 line-through leading-relaxed min-h-[100px]">
+                          <div className="space-y-6 text-left">
+                            {/* Stacked comparison */}
+                            <div className="space-y-4">
+                              <div className="border border-hairline rounded bg-zinc-950/20 p-4">
+                                <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider block mb-2">Original</span>
+                                <p className="text-xs text-zinc-400 line-through leading-relaxed">
                                   {optimizedData?.bulletDiffs?.[diffIndex]?.original ?? resumeDiffs[diffIndex]?.original}
-                                </div>
+                                </p>
                               </div>
 
-                              {/* Tailored */}
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                  <div className="h-5 w-5 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-                                    <Sparkles size={11} />
-                                  </div>
-                                  <span className="text-[10px] font-mono font-bold text-emerald-400 uppercase tracking-wider">
-                                    AI-Tailored Enhancement
-                                  </span>
-                                </div>
-                                <div className="p-4 rounded bg-emerald-500/[0.02] border border-emerald-500/20 text-xs text-white font-medium leading-relaxed min-h-[100px]">
+                              <div className="border border-emerald-500/20 rounded bg-emerald-500/[0.01] p-4">
+                                <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-wider block mb-2">AI-Optimized</span>
+                                <p className="text-xs text-white font-medium leading-relaxed">
                                   {optimizedData?.bulletDiffs?.[diffIndex]?.tailored ?? resumeDiffs[diffIndex]?.tailored}
-                                </div>
+                                </p>
                               </div>
                             </div>
 
-                            {/* AI Improvements List */}
-                            <div className="bg-zinc-950/50 border border-hairline rounded-lg p-5 space-y-4">
-                              <span className="text-[10px] font-mono text-zinc-500 block uppercase font-bold tracking-wider">
-                                Key Optimization Takeaways:
-                              </span>
-                              <div className="flex flex-col gap-3">
-                                {(optimizedData?.bulletDiffs?.[diffIndex]?.improvements ?? resumeDiffs[diffIndex]?.improvements).map((improvement, index) => {
-                                  const config = [
-                                    { label: "Keyword Match", icon: Target, color: "text-violet bg-violet/10 border-violet/20" },
-                                    { label: "Action Verb", icon: Zap, color: "text-amber-400 bg-amber-400/10 border-amber-400/20" },
-                                    { label: "Business Impact", icon: TrendingUp, color: "text-emerald-400 bg-emerald-400/10 border-emerald-400/20" }
-                                  ][index % 3];
+                            {/* 3-item grid block for takeaways */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                              {(optimizedData?.bulletDiffs?.[diffIndex]?.improvements ?? resumeDiffs[diffIndex]?.improvements).map((improvement, index) => {
+                                const config = [
+                                  { label: "Keyword Match", icon: Target, color: "text-violet border-violet/20" },
+                                  { label: "Action Verb", icon: Zap, color: "text-amber-400 border-amber-400/20" },
+                                  { label: "Business Impact", icon: TrendingUp, color: "text-emerald-400 border-emerald-400/20" }
+                                ][index % 3];
 
-                                  const IconComponent = config.icon;
-                                  
-                                  return (
-                                    <div key={index} className="flex items-center justify-between gap-4 p-3 rounded-lg bg-zinc-950 border border-hairline hover:border-zinc-800 transition-all duration-200">
-                                      <div className="flex items-center gap-3 flex-1">
-                                        <div className={`h-7 w-7 rounded-full flex items-center justify-center flex-shrink-0 ${config.color} border`}>
-                                          <IconComponent size={13} />
-                                        </div>
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                          <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border ${config.color} uppercase`}>
-                                            {config.label}
-                                          </span>
-                                          <span className="text-xs text-zinc-300 leading-normal font-medium text-left">
-                                            {improvement}
-                                          </span>
-                                        </div>
-                                      </div>
+                                const IconComponent = config.icon;
+                                
+                                return (
+                                  <div key={index} className="p-3.5 rounded border border-hairline bg-zinc-950/40 text-left flex flex-col justify-between gap-2.5">
+                                    <div className="flex items-center justify-between">
+                                      <span className={`text-[9px] font-mono uppercase tracking-wider ${config.color} font-semibold`}>
+                                        {config.label}
+                                      </span>
+                                      <IconComponent size={12} className={config.color.split(" ")[0]} />
                                     </div>
-                                  );
-                                })}
-                              </div>
+                                    <p className="text-[11px] text-zinc-400 leading-normal font-medium">
+                                      {improvement}
+                                    </p>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
 
@@ -1634,28 +1429,28 @@ function DashboardContent() {
                                   key={tpl.id}
                                   onClick={() => setSelectedTemplate(tpl.id as any)}
                                   className={`
-                                    p-3.5 rounded-lg border cursor-pointer transition-all duration-200 text-left
+                                    p-3 rounded-md border cursor-pointer transition-all duration-150 text-left
                                     ${
                                       selectedTemplate === tpl.id
-                                        ? "border-violet bg-violet/5 scale-[1.01]"
-                                        : "border-hairline bg-zinc-950/40 hover:border-zinc-800"
+                                        ? "border-white bg-zinc-900"
+                                        : "border-hairline hover:border-zinc-800"
                                     }
                                   `}
                                 >
                                   <div className="flex items-center justify-between">
-                                    <h4 className="text-xs font-bold text-white">{tpl.name}</h4>
+                                    <h4 className="text-xs font-semibold text-white">{tpl.name}</h4>
                                     <div
                                       className={`
-                                        h-3.5 w-3.5 rounded-full border flex items-center justify-center
+                                        h-3 w-3 rounded-full border flex items-center justify-center
                                         ${
                                           selectedTemplate === tpl.id
-                                            ? "border-violet bg-violet"
-                                            : "border-zinc-700"
+                                            ? "border-white bg-white"
+                                            : "border-zinc-800"
                                         }
                                       `}
                                     >
                                       {selectedTemplate === tpl.id && (
-                                        <div className="h-1.5 w-1.5 rounded-full bg-white" />
+                                        <div className="h-1 w-1 rounded-full bg-black" />
                                       )}
                                     </div>
                                   </div>
@@ -1681,17 +1476,17 @@ function DashboardContent() {
                                   await handleDownload();
                                 }}
                                 disabled={downloadingPdf}
-                                className="group w-full px-6 py-2.5 text-xs font-semibold bg-primary hover:bg-zinc-200 disabled:bg-zinc-800 disabled:text-zinc-650 disabled:cursor-not-allowed text-on-primary rounded-sm transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2"
+                                className="group w-full px-6 py-2.5 text-xs font-semibold bg-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-black rounded-full transition-all cursor-pointer flex items-center justify-center gap-2"
                               >
                                 {downloadingPdf ? (
                                   <>
-                                    <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent" />
+                                    <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-black border-t-transparent" />
                                     Generating PDF...
                                   </>
                                 ) : (
                                   <>
                                     Download PDF
-                                    <Download size={14} className="group-hover:translate-y-0.5 transition-transform" />
+                                    <Download size={14} />
                                   </>
                                 )}
                               </button>
