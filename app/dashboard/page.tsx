@@ -185,6 +185,8 @@ function DashboardContent() {
   const [activeResultTab, setActiveResultTab] = useState<"enhancements" | "preview">("enhancements");
   const [selectedTemplate, setSelectedTemplate] = useState<"classic" | "modern" | "minimal" | "split" | "slate" | "executive">("classic");
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [downloadFormat, setDownloadFormat] = useState<"pdf" | "docx">("pdf");
+  const [downloadDropdownOpen, setDownloadDropdownOpen] = useState(false);
   
 
   
@@ -211,6 +213,7 @@ function DashboardContent() {
       const savedSelectedTemplate = sessionStorage.getItem("atsprime_dashboard_selectedTemplate");
       const savedActiveResultTab = sessionStorage.getItem("atsprime_dashboard_activeResultTab");
       const savedDiffIndex = sessionStorage.getItem("atsprime_dashboard_diffIndex");
+      const savedDownloadFormat = sessionStorage.getItem("atsprime_dashboard_downloadFormat");
 
       if (savedStep) {
         const parsedStep = parseInt(savedStep, 10);
@@ -227,6 +230,7 @@ function DashboardContent() {
       if (savedSelectedTemplate) setSelectedTemplate(savedSelectedTemplate as any);
       if (savedActiveResultTab) setActiveResultTab(savedActiveResultTab as any);
       if (savedDiffIndex) setDiffIndex(parseInt(savedDiffIndex, 10));
+      if (savedDownloadFormat) setDownloadFormat(savedDownloadFormat as any);
     } catch (e) {
       console.error("Failed to restore session state:", e);
     }
@@ -236,7 +240,13 @@ function DashboardContent() {
   useEffect(() => {
     if (user && sessionStorage.getItem("pending_dashboard_download") === "true") {
       sessionStorage.removeItem("pending_dashboard_download");
-      handleDownload();
+      const savedFormat = sessionStorage.getItem("pending_dashboard_download_format") as "pdf" | "docx" | null;
+      if (savedFormat) {
+        sessionStorage.removeItem("pending_dashboard_download_format");
+        handleDownload(savedFormat);
+      } else {
+        handleDownload();
+      }
     }
   }, [user]);
 
@@ -264,10 +274,11 @@ function DashboardContent() {
       sessionStorage.setItem("atsprime_dashboard_selectedTemplate", selectedTemplate);
       sessionStorage.setItem("atsprime_dashboard_activeResultTab", activeResultTab);
       sessionStorage.setItem("atsprime_dashboard_diffIndex", String(diffIndex));
+      sessionStorage.setItem("atsprime_dashboard_downloadFormat", downloadFormat);
     } catch (e) {
       console.error("Failed to save session state:", e);
     }
-  }, [step, selectedFile, resumeText, jobDescription, optimizedData, uploadedFileBase64, selectedTemplate, activeResultTab, diffIndex]);
+  }, [step, selectedFile, resumeText, jobDescription, optimizedData, uploadedFileBase64, selectedTemplate, activeResultTab, diffIndex, downloadFormat]);
 
   // Auto-save resume if user is logged in and results are generated
   useEffect(() => {
@@ -610,10 +621,13 @@ function DashboardContent() {
     }
   };
 
-  // Handle dynamic download of the tailored resume as PDF via server API
-  const handleDownload = async (): Promise<boolean> => {
+  // Handle dynamic download of the tailored resume as PDF/DOCX via server API
+  const handleDownload = async (formatOverride?: "pdf" | "docx"): Promise<boolean> => {
+    const activeFormat = formatOverride || downloadFormat;
+
     if (!user) {
       sessionStorage.setItem("pending_dashboard_download", "true");
+      sessionStorage.setItem("pending_dashboard_download_format", activeFormat);
       const currentUrl = window.location.pathname + window.location.search;
       router.push(`/login?redirect=${encodeURIComponent(currentUrl)}`);
       return false;
@@ -624,57 +638,125 @@ function DashboardContent() {
     setApiError(null);
 
     try {
-      const response = await fetch("/api/pdf", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          resumeText: optimizedData.tailoredResumeText,
-          templateId: selectedTemplate,
-        }),
-      });
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error?.message || `Failed to generate PDF (HTTP ${response.status})`);
-      }
-
-      // Convert response stream to a PDF blob
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      
       const baseName = selectedFile 
         ? selectedFile.name.replace(/\.[^/.]+$/, "")
         : "ATSPrime_Optimized_Resume";
         
       const formattedTemplateName = selectedTemplate.charAt(0).toUpperCase() + selectedTemplate.slice(1);
-      const fileName = `${baseName}_${formattedTemplateName}.pdf`;
 
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      
-      // Delay revocation to ensure browser download manager has retrieved the blob
-      setTimeout(() => {
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }, 1000);
+      if (activeFormat === "docx") {
+        const response = await fetch("/api/docx", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            resumeText: optimizedData.tailoredResumeText,
+          }),
+        });
 
-      setDownloadSuccess(true);
-      return true;
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.error?.message || `Failed to generate DOCX (HTTP ${response.status})`);
+        }
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const fileName = `${baseName}_${formattedTemplateName}.docx`;
+
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        
+        setTimeout(() => {
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }, 1000);
+
+        setDownloadSuccess(true);
+        setDownloadingPdf(false);
+        return true;
+      } else {
+        const response = await fetch("/api/pdf", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            resumeText: optimizedData.tailoredResumeText,
+            templateId: selectedTemplate,
+          }),
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.error?.message || `Failed to generate PDF (HTTP ${response.status})`);
+        }
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const fileName = `${baseName}_${formattedTemplateName}.pdf`;
+
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        
+        setTimeout(() => {
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }, 1000);
+
+        setDownloadSuccess(true);
+        setDownloadingPdf(false);
+        return true;
+      }
     } catch (err: any) {
-      console.error("PDF download error:", err);
-      setApiError(err.message || "Failed to download resume PDF.");
-      return false;
-    } finally {
+      console.error("Download error:", err);
+      
+      if (activeFormat === "pdf") {
+        try {
+          const htmlContent = generateTemplateHtml(optimizedData.tailoredResumeText, selectedTemplate);
+          
+          const iframe = document.createElement("iframe");
+          iframe.style.position = "absolute";
+          iframe.style.width = "0px";
+          iframe.style.height = "0px";
+          iframe.style.border = "none";
+          document.body.appendChild(iframe);
+
+          const doc = iframe.contentDocument || iframe.contentWindow?.document;
+          if (doc) {
+            doc.open();
+            doc.write(htmlContent);
+            doc.close();
+
+            iframe.contentWindow?.focus();
+            setTimeout(() => {
+              iframe.contentWindow?.print();
+              setTimeout(() => {
+                document.body.removeChild(iframe);
+              }, 1000);
+            }, 500);
+
+            setDownloadSuccess(true);
+            setDownloadingPdf(false);
+            setApiError("Headless PDF renderer timed out. Opened browser print dialog as secure fallback (Select 'Save as PDF').");
+            return true;
+          }
+        } catch (printErr) {
+          console.error("Print fallback error:", printErr);
+        }
+      }
+
+      setApiError(err.message || `Failed to download resume ${activeFormat.toUpperCase()}.`);
       setDownloadingPdf(false);
+      return false;
     }
   };
-
-
 
   const resetFlow = () => {
     setStep(1);
@@ -1470,26 +1552,72 @@ function DashboardContent() {
                                 </button>
                               </div>
                             )}
-                            <div className="pt-4 border-t border-hairline flex justify-end gap-3">
-                              <button
-                                onClick={async () => {
-                                  await handleDownload();
-                                }}
-                                disabled={downloadingPdf}
-                                className="group w-full px-6 py-2.5 text-xs font-semibold bg-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-black rounded-full transition-all cursor-pointer flex items-center justify-center gap-2"
-                              >
-                                {downloadingPdf ? (
+                            <div className="pt-4 border-t border-hairline flex flex-col items-stretch gap-2 w-full">
+                              <div className="relative flex items-stretch w-full rounded-full overflow-visible">
+                                <button
+                                  onClick={async () => {
+                                    await handleDownload();
+                                  }}
+                                  disabled={downloadingPdf}
+                                  className="group flex-1 px-6 py-2.5 text-xs font-semibold bg-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-black rounded-l-full border-r border-zinc-200 transition-all cursor-pointer flex items-center justify-center gap-2"
+                                >
+                                  {downloadingPdf ? (
+                                    <>
+                                      <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-black border-t-transparent" />
+                                      {downloadFormat === "pdf" ? "Generating PDF..." : "Generating DOCX..."}
+                                    </>
+                                  ) : (
+                                    <>
+                                      {downloadFormat === "pdf" ? "Download PDF" : "Download DOCX (Word)"}
+                                      <Download size={14} />
+                                    </>
+                                  )}
+                                </button>
+                                
+                                <button
+                                  onClick={() => setDownloadDropdownOpen(!downloadDropdownOpen)}
+                                  disabled={downloadingPdf}
+                                  className="px-3 bg-white hover:opacity-90 disabled:opacity-50 text-black rounded-r-full flex items-center justify-center cursor-pointer transition-all border-l border-zinc-250"
+                                  title="Change download format"
+                                >
+                                  <ChevronDown size={14} className={`transition-transform duration-200 ${downloadDropdownOpen ? "rotate-180" : ""}`} />
+                                </button>
+
+                                {downloadDropdownOpen && (
                                   <>
-                                    <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-black border-t-transparent" />
-                                    Generating PDF...
-                                  </>
-                                ) : (
-                                  <>
-                                    Download PDF
-                                    <Download size={14} />
+                                    <div 
+                                      className="fixed inset-0 z-40" 
+                                      onClick={() => setDownloadDropdownOpen(false)} 
+                                    />
+                                    <div className="absolute right-0 bottom-full mb-2 w-48 bg-zinc-900 border border-hairline rounded-lg shadow-xl py-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-150">
+                                      <button
+                                        onClick={() => {
+                                          setDownloadFormat("pdf");
+                                          setDownloadDropdownOpen(false);
+                                        }}
+                                        className={`w-full px-4 py-2 text-left text-xs flex items-center gap-2.5 transition-colors ${
+                                          downloadFormat === "pdf" ? "bg-zinc-800 text-white font-bold" : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                                        }`}
+                                      >
+                                        <FileText size={14} />
+                                        PDF Document (.pdf)
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setDownloadFormat("docx");
+                                          setDownloadDropdownOpen(false);
+                                        }}
+                                        className={`w-full px-4 py-2 text-left text-xs flex items-center gap-2.5 transition-colors ${
+                                          downloadFormat === "docx" ? "bg-zinc-800 text-white font-bold" : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                                        }`}
+                                      >
+                                        <FileText size={14} />
+                                        Word Document (.docx)
+                                      </button>
+                                    </div>
                                   </>
                                 )}
-                              </button>
+                              </div>
                             </div>
                           </div>
 

@@ -22,6 +22,8 @@ import {
   Crown,
   Grid,
   Edit3,
+  ChevronDown,
+  FileText,
 } from "lucide-react";
 
 import { useAuth } from "../context/AuthContext";
@@ -167,6 +169,8 @@ function BuilderContent() {
   const [isPro, setIsPro] = useState(true);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [downloadFormat, setDownloadFormat] = useState<"pdf" | "docx">("pdf");
+  const [downloadDropdownOpen, setDownloadDropdownOpen] = useState(false);
   const [triggerDownloadAfterRestore, setTriggerDownloadAfterRestore] = useState(false);
 
   // Set isDirty to true when current resumeData differs from savedResumeData
@@ -401,13 +405,16 @@ function BuilderContent() {
     setResumeData(prev => ({ ...prev, links: prev.links.filter(item => item.id !== id) }));
   };
 
-  const handleDownload = async () => {
+  const handleDownload = async (formatOverride?: "pdf" | "docx") => {
+    const activeFormat = formatOverride || downloadFormat;
+
     if (!user) {
       localStorage.setItem("pending_resume_data", JSON.stringify(resumeData));
       localStorage.setItem("pending_template", selectedTemplate);
       localStorage.setItem("pending_view_mode", viewMode);
       localStorage.setItem("pending_active_tab", activeTab);
       localStorage.setItem("pending_download_trigger", "true");
+      localStorage.setItem("pending_download_format", activeFormat);
 
       const currentUrl = window.location.pathname + window.location.search;
       router.push(`/login?redirect=${encodeURIComponent(currentUrl)}`);
@@ -421,37 +428,166 @@ function BuilderContent() {
 
     try {
       setDownloadingPdf(true);
-      const response = await fetch("/api/pdf/builder", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resumeData, templateId: selectedTemplate }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to compile PDF document.");
-      }
-
-      // Capture binary stream download
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `ATSPrime_Resume_${selectedTemplate}.pdf`;
-      document.body.appendChild(a);
-      a.click();
       
-      // Delay revocation to ensure browser download manager has retrieved the blob
-      setTimeout(() => {
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      }, 1000);
+      if (activeFormat === "docx") {
+        const response = await fetch("/api/docx/builder", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ resumeData }),
+        });
 
-      // Successfully saved/exported, reset unsaved changes state
-      setSavedResumeData(resumeData);
-    } catch (error) {
-      console.error(error);
-      alert("Error printing PDF document.");
-    } finally {
+        if (!response.ok) {
+          throw new Error("Failed to compile Word document.");
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `ATSPrime_Resume_${resumeData.personalInfo?.name || "Builder"}.docx`;
+        document.body.appendChild(a);
+        a.click();
+        
+        setTimeout(() => {
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+        }, 1000);
+
+        setSavedResumeData(resumeData);
+        setDownloadingPdf(false);
+      } else {
+        const response = await fetch("/api/pdf/builder", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ resumeData, templateId: selectedTemplate }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to compile PDF document.");
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `ATSPrime_Resume_${selectedTemplate}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        
+        setTimeout(() => {
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+        }, 1000);
+
+        setSavedResumeData(resumeData);
+        setDownloadingPdf(false);
+      }
+    } catch (err: any) {
+      console.error("Export error:", err);
+      
+      if (activeFormat === "pdf") {
+        try {
+          const { renderToStaticMarkup } = await import("react-dom/server");
+          const ATSClassic = (await import("@/app/components/resume/templates/ATSClassic")).default;
+          const Modern = (await import("@/app/components/resume/templates/Modern")).default;
+          const Executive = (await import("@/app/components/resume/templates/Executive")).default;
+          const Harvard = (await import("@/app/components/resume/templates/Harvard")).default;
+          const Minimal = (await import("@/app/components/resume/templates/Minimal")).default;
+          const Creative = (await import("@/app/components/resume/templates/Creative")).default;
+          const Corporate = (await import("@/app/components/resume/templates/Corporate")).default;
+
+          const serverTemplateComponents: Record<string, React.ComponentType<any>> = {
+            classic: ATSClassic,
+            modern: Modern,
+            executive: Executive,
+            harvard: Harvard,
+            minimal: Minimal,
+            creative: Creative,
+            corporate: Corporate,
+          };
+
+          const TemplateComponent = serverTemplateComponents[selectedTemplate] || ATSClassic;
+          const templateElement = React.createElement(TemplateComponent, { data: resumeData });
+          const renderedMarkup = renderToStaticMarkup(templateElement);
+
+          const htmlContent = `
+            <!DOCTYPE html>
+            <html>
+              <head>
+                <meta charset="utf-8" />
+                <script src="https://cdn.tailwindcss.com"></script>
+                <script>
+                  tailwind.config = {
+                    theme: {
+                      extend: {
+                        colors: {
+                          violet: '#7928ca',
+                          'violet-deep': '#4c2889',
+                          primary: '#171717',
+                          'on-primary': '#ffffff',
+                          ink: '#171717',
+                          hairline: '#ebebeb',
+                          canvas: '#ffffff',
+                          'canvas-soft': '#fafafa'
+                        }
+                      }
+                    }
+                  }
+                </script>
+                <style>
+                  @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;850;900&family=Geist+Mono&family=Inter:wght@400;500;600;700;800;900&display=swap');
+                  body {
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                    margin: 0;
+                    padding: 40px;
+                    background-color: white;
+                  }
+                  @media print {
+                    body { padding: 0; margin: 0; }
+                  }
+                </style>
+              </head>
+              <body>
+                <div style="max-width: 800px; margin: 0 auto; background: white;">
+                  ${renderedMarkup}
+                </div>
+              </body>
+            </html>
+          `;
+
+          const iframe = document.createElement("iframe");
+          iframe.style.position = "absolute";
+          iframe.style.width = "0px";
+          iframe.style.height = "0px";
+          iframe.style.border = "none";
+          document.body.appendChild(iframe);
+
+          const doc = iframe.contentDocument || iframe.contentWindow?.document;
+          if (doc) {
+            doc.open();
+            doc.write(htmlContent);
+            doc.close();
+
+            iframe.contentWindow?.focus();
+            setTimeout(() => {
+              iframe.contentWindow?.print();
+              setTimeout(() => {
+                document.body.removeChild(iframe);
+              }, 1000);
+            }, 500);
+
+            setSavedResumeData(resumeData);
+            setDownloadingPdf(false);
+            alert("Headless PDF compiler timed out. Opened browser print dialog as secure fallback (Select 'Save as PDF' to download).");
+            return;
+          }
+        } catch (printErr) {
+          console.error("Print fallback error:", printErr);
+        }
+      }
+      
+      alert(err.message || `Failed to download resume ${activeFormat.toUpperCase()}.`);
       setDownloadingPdf(false);
     }
   };
@@ -490,6 +626,11 @@ function BuilderContent() {
 
         if (pendingDownloadTrigger === "true" && user) {
           localStorage.removeItem("pending_download_trigger");
+          const savedFormat = localStorage.getItem("pending_download_format") as "pdf" | "docx" | null;
+          if (savedFormat) {
+            localStorage.removeItem("pending_download_format");
+            setDownloadFormat(savedFormat);
+          }
           setTriggerDownloadAfterRestore(true);
         } else {
           localStorage.removeItem("pending_download_trigger");
@@ -503,9 +644,9 @@ function BuilderContent() {
   useEffect(() => {
     if (triggerDownloadAfterRestore && user) {
       setTriggerDownloadAfterRestore(false);
-      handleDownload();
+      handleDownload(downloadFormat);
     }
-  }, [triggerDownloadAfterRestore, user]);
+  }, [triggerDownloadAfterRestore, user, downloadFormat]);
 
   const ActiveTemplate = templateComponents[selectedTemplate] || templateComponents.classic;
 
@@ -556,23 +697,69 @@ function BuilderContent() {
         </div>
 
         <div className="flex items-center gap-4">
-          <button
-            onClick={handleDownload}
-            disabled={downloadingPdf}
-            className="group px-4 py-1.5 text-xs font-bold bg-primary hover:bg-zinc-200 disabled:bg-zinc-800 disabled:text-zinc-650 disabled:cursor-not-allowed text-on-primary rounded-sm transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2"
-          >
-            {downloadingPdf ? (
+          <div className="relative flex items-stretch rounded-md overflow-visible h-7">
+            <button
+              onClick={() => handleDownload()}
+              disabled={downloadingPdf}
+              className="group px-3 py-1.5 text-xs font-bold bg-primary hover:bg-zinc-200 disabled:bg-zinc-800 disabled:cursor-not-allowed text-on-primary rounded-l-md border-r border-zinc-800 transition-colors cursor-pointer flex items-center gap-2"
+            >
+              {downloadingPdf ? (
+                <>
+                  <div className="h-3 w-3 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent" />
+                  {downloadFormat === "pdf" ? "Printing..." : "Compiling..."}
+                </>
+              ) : (
+                <>
+                  {downloadFormat === "pdf" ? "Export A4 PDF" : "Export DOCX (Word)"}
+                  <Download size={13} />
+                </>
+              )}
+            </button>
+            
+            <button
+              onClick={() => setDownloadDropdownOpen(!downloadDropdownOpen)}
+              disabled={downloadingPdf}
+              className="px-2 bg-primary hover:bg-zinc-200 disabled:bg-zinc-800 disabled:cursor-not-allowed text-on-primary rounded-r-md flex items-center justify-center cursor-pointer transition-colors border-l border-zinc-800"
+              title="Change format"
+            >
+              <ChevronDown size={12} className={`transition-transform duration-200 ${downloadDropdownOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            {downloadDropdownOpen && (
               <>
-                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent" />
-                Printing PDF...
-              </>
-            ) : (
-              <>
-                Export A4 PDF
-                <Download size={13} />
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setDownloadDropdownOpen(false)} 
+                />
+                <div className="absolute right-0 top-full mt-1.5 w-48 bg-zinc-900 border border-hairline rounded-md shadow-xl py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <button
+                    onClick={() => {
+                      setDownloadFormat("pdf");
+                      setDownloadDropdownOpen(false);
+                    }}
+                    className={`w-full px-4 py-2 text-left text-xs flex items-center gap-2.5 transition-colors ${
+                      downloadFormat === "pdf" ? "bg-zinc-800 text-white font-bold" : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                    }`}
+                  >
+                    <FileText size={13} />
+                    PDF Document (.pdf)
+                  </button>
+                  <button
+                    onClick={() => {
+                      setDownloadFormat("docx");
+                      setDownloadDropdownOpen(false);
+                    }}
+                    className={`w-full px-4 py-2 text-left text-xs flex items-center gap-2.5 transition-colors ${
+                      downloadFormat === "docx" ? "bg-zinc-800 text-white font-bold" : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                    }`}
+                  >
+                    <FileText size={13} />
+                    Word Document (.docx)
+                  </button>
+                </div>
               </>
             )}
-          </button>
+          </div>
         </div>
       </header>
 
