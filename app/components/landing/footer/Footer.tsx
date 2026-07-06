@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Github, Linkedin, Send, Sparkles } from "lucide-react";
+import { Github, Linkedin, Sparkles } from "lucide-react";
 import FooterColumn from "./FooterColumn";
 
 const XIcon = ({ size = 18, className = "" }: { size?: number; className?: string }) => (
@@ -68,66 +68,7 @@ export default function Footer() {
   return (
     <footer className="border-t border-hairline bg-canvas-soft/80 backdrop-blur-sm">
       <div className="mx-auto max-w-7xl px-6 py-20">
-        {/* Newsletter */}
 
-        <div className="mb-20 rounded-lg border border-hairline bg-canvas p-10 backdrop-blur-sm">
-          <div className="grid items-center gap-8 lg:grid-cols-2">
-            <div>
-              <h3 className="text-3xl font-bold text-zinc-900 dark:text-white">
-                Weekly Career Tips
-              </h3>
-
-              <p className="mt-4 text-zinc-600 dark:text-zinc-400">
-                Get resume advice, ATS tips, and job search strategies delivered to your inbox.
-              </p>
-            </div>
-
-            <form className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="
-                  flex-1
-                  rounded-sm
-                  border
-                  border-hairline
-                  bg-canvas-soft
-                  px-4
-                  h-10
-                  text-sm
-                  text-ink
-                  outline-none
-                  placeholder:text-mute
-                  focus:border-hairline-strong
-                  transition-all
-                "
-              />
-
-              <button
-                className="
-                  inline-flex
-                  items-center
-                  justify-center
-                  gap-2
-                  rounded-sm
-                  bg-primary
-                  hover:opacity-90
-                  px-6
-                  h-10
-                  text-sm
-                  font-medium
-                  text-on-primary
-                  transition-all
-                  duration-200
-                  shadow-sm
-                "
-              >
-                <Send size={18} strokeWidth={1.5} />
-                Subscribe
-              </button>
-            </form>
-          </div>
-        </div>
 
         {/* Footer Grid */}
 

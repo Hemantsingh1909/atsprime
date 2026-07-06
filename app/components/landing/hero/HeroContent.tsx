@@ -53,7 +53,7 @@ export default function HeroContent() {
 
       <motion.h1
         variants={item}
-        className="mt-8 text-5xl font-semibold leading-tight tracking-tight text-zinc-950 dark:text-white md:text-7xl lg:text-7xl xl:text-8xl"
+        className="mt-4 text-5xl font-semibold leading-tight tracking-tight text-zinc-950 dark:text-white md:text-7xl lg:text-7xl xl:text-8xl"
       >
         Stop rewriting
         <br />
@@ -103,21 +103,8 @@ export default function HeroContent() {
 
       <motion.div
         variants={item}
-        className="mt-12 flex flex-col gap-6 pt-4"
+        className="mt-6 flex flex-col gap-6"
       >
-        <div className="flex items-center gap-1.5">
-          <div className="flex gap-0.5">
-            {[...Array(5)].map((_, i) => (
-              <span key={i} className="text-lg text-amber-400">
-                ★
-              </span>
-            ))}
-          </div>
-          <span className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-            Trusted by 10,000+ job seekers
-          </span>
-        </div>
-
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-8">
           <div className="flex items-center gap-2.5">
             <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/20">

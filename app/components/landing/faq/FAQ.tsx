@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import FAQItem from "./FAQItem";
-import SupportCard from "./SupportCard";
 
 const faqs = [
   {
@@ -110,8 +109,6 @@ export default function FAQ() {
             />
           ))}
         </div>
-
-         <SupportCard />
       </div>
     </section>
   );

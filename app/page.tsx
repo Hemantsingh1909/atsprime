@@ -4,13 +4,11 @@ import { useEffect } from "react";
 import { useLenis } from "lenis/react";
 import Navbar from "./components/landing/Navbar";
 import Hero from "./components/landing/hero/Hero";
-import StatsBar from "./components/landing/StatsBar";
-import Features from "./components/landing/features/Features";
 import HowItWorks from "./components/landing/HowItWorks";
+import Features from "./components/landing/features/Features";
 import CTA from "./components/landing/CTA";
 import FAQ from "./components/landing/faq/FAQ";
 import Footer from "./components/landing/footer/Footer";
-import Integrations from "./components/landing/Integrations";
 
 export default function Home() {
   const lenis = useLenis();
@@ -34,8 +32,6 @@ export default function Home() {
     <>
       <Navbar />
       <Hero />
-      <StatsBar />
-      <Integrations />
       <HowItWorks />
       <Features />
       <FAQ />
