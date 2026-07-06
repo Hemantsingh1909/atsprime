@@ -207,7 +207,7 @@ export default function Navbar() {
                   </AnimatePresence>
                 </div>
               ) : (
-                <Link href="/dashboard?auth=signup">
+                <Link href="/login">
                   <motion.button
                     whileHover={{
                       scale: 1.02,
@@ -319,7 +319,7 @@ export default function Navbar() {
                     </button>
                   </>
                 ) : (
-                  <Link href="/dashboard?auth=signup" onClick={() => setMobileOpen(false)} className="block">
+                  <Link href="/login" onClick={() => setMobileOpen(false)} className="block">
                     <button className="w-full px-4 py-2.5 rounded-sm bg-primary hover:bg-primary/90 text-on-primary font-medium transition-colors cursor-pointer">
                       Create Account
                     </button>
