@@ -10,8 +10,9 @@ import Harvard from "@/app/components/resume/templates/Harvard";
 import Minimal from "@/app/components/resume/templates/Minimal";
 import Creative from "@/app/components/resume/templates/Creative";
 import Corporate from "@/app/components/resume/templates/Corporate";
+import { ResumeData } from "@/app/types/resume";
 
-const serverTemplateComponents: Record<string, React.ComponentType<any>> = {
+const serverTemplateComponents: Record<string, React.ComponentType<{ data: ResumeData }>> = {
   classic: ATSClassic,
   modern: Modern,
   executive: Executive,
@@ -142,10 +143,11 @@ export async function POST(request: Request) {
       status: 200,
       headers
     });
-  } catch (err: any) {
-    console.error("Builder PDF generation route error:", err.stack || err);
+  } catch (err) {
+    const error = err as Error;
+    console.error("Builder PDF generation route error:", error.stack || error);
     return NextResponse.json(
-      { error: { message: err.message || "An unexpected error occurred during PDF generation." } },
+      { error: { message: error.message || "An unexpected error occurred during PDF generation." } },
       { status: 500 }
     );
   }

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } from "docx";
-import { ResumeData } from "@/app/types/resume";
+import { ResumeData, LanguageItem } from "@/app/types/resume";
 
 export async function POST(request: Request) {
   try {
-    const { resumeData } = await request.json();
+    const { resumeData }: { resumeData: ResumeData } = await request.json();
 
     if (!resumeData) {
       return NextResponse.json(
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       }
     };
 
-    const docChildren: any[] = [];
+    const docChildren: Paragraph[] = [];
     const info = resumeData.personalInfo || {};
 
     // Header: Name (Bold, Center)
@@ -328,7 +328,7 @@ export async function POST(request: Request) {
     // Section: Languages
     if (resumeData.languages && resumeData.languages.length > 0) {
       addSectionHeading("Languages");
-      const langItems = resumeData.languages.map((l: any) => `${l.language} (${l.proficiency})`);
+      const langItems = resumeData.languages.map((l: LanguageItem) => `${l.language} (${l.proficiency})`);
       docChildren.push(
         new Paragraph({
           children: [
@@ -371,10 +371,11 @@ export async function POST(request: Request) {
       status: 200,
       headers
     });
-  } catch (err: any) {
-    console.error("API route DOCX builder generation error:", err);
+  } catch (err) {
+    const error = err as Error;
+    console.error("API route DOCX builder generation error:", error);
     return NextResponse.json(
-      { error: { message: err.message || "An unexpected error occurred during DOCX generation." } },
+      { error: { message: error.message || "An unexpected error occurred during DOCX generation." } },
       { status: 500 }
     );
   }

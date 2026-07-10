@@ -1,8 +1,8 @@
 import dynamic from "next/dynamic";
-import { TemplateMetadata } from "@/app/types/resume";
+import { TemplateMetadata, ResumeData } from "@/app/types/resume";
 
 // Lazy-load template components for better performance
-export const templateComponents: Record<string, React.ComponentType<any>> = {
+export const templateComponents: Record<string, React.ComponentType<{ data: ResumeData }>> = {
   classic: dynamic(() => import("./ATSClassic")),
   modern: dynamic(() => import("./Modern")),
   executive: dynamic(() => import("./Executive")),

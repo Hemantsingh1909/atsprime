@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -48,7 +48,7 @@ function ResetPasswordContent() {
       } else {
         setErrorMessage(res.error || "Failed to update password.");
       }
-    } catch (err) {
+    } catch {
       setErrorMessage("An unexpected error occurred during password update.");
     } finally {
       setSubmitting(false);

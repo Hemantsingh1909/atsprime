@@ -1,7 +1,19 @@
 import * as Sentry from "@sentry/nextjs";
 
+const envDsn = process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN;
+const isPlaceholder = !envDsn || envDsn.includes("placeholder") || envDsn === "your_sentry_dsn_here";
+const finalDsn = isPlaceholder ? "https://placeholder@sentry.io/123456" : envDsn;
+
 Sentry.init({
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN || "https://placeholder@sentry.io/123456",
+  dsn: finalDsn,
+  
+  // Discard all envelope transmissions silently when configured with a placeholder DSN
+  ...(isPlaceholder ? {
+    transport: () => ({
+      send: () => Promise.resolve({ statusCode: 200 }),
+      flush: () => Promise.resolve(true),
+    }),
+  } : {}),
   
   // Adjust this value in production, or use tracesSampler for greater control
   tracesSampleRate: 1.0,

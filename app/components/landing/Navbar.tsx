@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Sparkles, LogOut, ChevronDown, User, Crown, History, CreditCard, Settings } from "lucide-react";
+import { Menu, X, Sparkles, LogOut, ChevronDown, User, Crown, History, Settings } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 const navItems = [
@@ -118,6 +118,7 @@ export default function Navbar() {
                     className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-zinc-300 hover:text-white transition-colors rounded-lg bg-zinc-900 border border-hairline hover:bg-zinc-850 cursor-pointer"
                   >
                     {user.avatarUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
                       <img src={user.avatarUrl} alt="Avatar" className="h-6 w-6 rounded-full object-cover border border-violet/30" />
                     ) : (
                       <div className="h-6 w-6 rounded-full bg-violet/20 border border-violet/30 text-violet flex items-center justify-center text-xs font-semibold uppercase">
@@ -288,6 +289,7 @@ export default function Navbar() {
                   <>
                     <div className="px-4 py-2.5 bg-zinc-900 border border-hairline rounded flex items-center gap-3">
                       {user.avatarUrl ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
                         <img src={user.avatarUrl} alt="Avatar" className="h-8 w-8 rounded-full object-cover border border-violet/30" />
                       ) : (
                         <div className="h-8 w-8 rounded-full bg-violet/20 border border-violet/30 text-violet flex items-center justify-center text-sm font-semibold uppercase">

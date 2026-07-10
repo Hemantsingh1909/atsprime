@@ -1,7 +1,7 @@
 import { ResumeData } from "@/app/types/resume";
 
 export default function Modern({ data }: { data: ResumeData }) {
-  const { personalInfo, summary, experience, education, skills, projects, certificates, achievements, languages, links } = data;
+  const { personalInfo, summary, experience, education, skills, projects, certificates, languages, links } = data;
 
   return (
     <div className="p-8 bg-zinc-50 text-zinc-900 font-sans leading-relaxed text-xs max-w-[21cm] min-h-[29.7cm] box-border print:p-0 mx-auto flex flex-col justify-between">

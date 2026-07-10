@@ -1,7 +1,7 @@
 import { ResumeData } from "@/app/types/resume";
 
 export default function Executive({ data }: { data: ResumeData }) {
-  const { personalInfo, summary, experience, education, skills, projects, certificates, achievements, languages, links } = data;
+  const { personalInfo, summary, experience, education, skills, certificates, achievements, languages, links } = data;
 
   return (
     <div className="p-10 bg-white text-zinc-800 font-serif leading-relaxed text-xs max-w-[21cm] min-h-[29.7cm] box-border print:p-0 mx-auto">

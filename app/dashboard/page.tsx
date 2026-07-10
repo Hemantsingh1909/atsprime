@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams, usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Upload,
@@ -14,9 +14,6 @@ import {
   ArrowRight,
   ArrowLeft,
   RefreshCw,
-  X,
-  Lock,
-  Mail,
   ChevronRight,
   TrendingUp,
   FileCheck,
@@ -25,12 +22,9 @@ import {
   User,
   LogOut,
   ChevronDown,
-  Key,
   Zap,
   Target,
-  ShieldCheck,
   History,
-  CreditCard,
   Settings,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -125,7 +119,6 @@ const analysisSteps = [
 ];
 
 function DashboardContent() {
-  const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -139,9 +132,6 @@ function DashboardContent() {
   const {
     user,
     savedResumes,
-    signUp,
-    signIn,
-    signInWithGoogle,
     signOut,
     saveResume,
     deleteResume,
@@ -153,23 +143,6 @@ function DashboardContent() {
   
   // App states: 1 = Upload, 2 = Job Description, 3 = Analysis, 4 = Results
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
-  const handleStepClick = (targetStep: 1 | 2 | 3 | 4) => {
-    if (targetStep === 1) {
-      setStep(1);
-    } else if (targetStep === 2) {
-      if (resumeText.trim() !== "" || step >= 2) {
-        setStep(2);
-      }
-    } else if (targetStep === 3) {
-      if (analysisProgress > 0 || step >= 3) {
-        setStep(3);
-      }
-    } else if (targetStep === 4) {
-      if (optimizedData || step === 4) {
-        setStep(4);
-      }
-    }
-  };
   const [selectedFile, setSelectedFile] = useState<{ name: string; size: string; uploadedAt: string } | null>(null);
   const [resumeText, setResumeText] = useState("");
   const [jobDescription, setJobDescription] = useState("");
@@ -178,6 +151,7 @@ function DashboardContent() {
   const [optimizedData, setOptimizedData] = useState<OptimizedData | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadedFileBase64, setUploadedFileBase64] = useState<string | null>(null);
   const [isParsing, setIsParsing] = useState(false);
@@ -193,6 +167,7 @@ function DashboardContent() {
   // Active layouts
   const [isDragging, setIsDragging] = useState(false);
   const [diffIndex, setDiffIndex] = useState(0);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [hasSavedThisRun, setHasSavedThisRun] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -215,22 +190,24 @@ function DashboardContent() {
       const savedDiffIndex = sessionStorage.getItem("atsprime_dashboard_diffIndex");
       const savedDownloadFormat = sessionStorage.getItem("atsprime_dashboard_downloadFormat");
 
-      if (savedStep) {
-        const parsedStep = parseInt(savedStep, 10);
-        if (parsedStep === 1 || parsedStep === 2 || parsedStep === 3 || parsedStep === 4) {
-          // If the page was refreshed during dynamic tailoring, step back to Step 2 so they can re-run
-          setStep(parsedStep === 3 ? 2 : parsedStep as 1 | 2 | 3 | 4);
+      setTimeout(() => {
+        if (savedStep) {
+          const parsedStep = parseInt(savedStep, 10);
+          if (parsedStep === 1 || parsedStep === 2 || parsedStep === 3 || parsedStep === 4) {
+            // If the page was refreshed during dynamic tailoring, step back to Step 2 so they can re-run
+            setStep(parsedStep === 3 ? 2 : parsedStep as 1 | 2 | 3 | 4);
+          }
         }
-      }
-      if (savedSelectedFile) setSelectedFile(JSON.parse(savedSelectedFile));
-      if (savedResumeText) setResumeText(savedResumeText);
-      if (savedJobDesc) setJobDescription(savedJobDesc);
-      if (savedOptimizedData) setOptimizedData(JSON.parse(savedOptimizedData));
-      if (savedBase64) setUploadedFileBase64(savedBase64);
-      if (savedSelectedTemplate) setSelectedTemplate(savedSelectedTemplate as any);
-      if (savedActiveResultTab) setActiveResultTab(savedActiveResultTab as any);
-      if (savedDiffIndex) setDiffIndex(parseInt(savedDiffIndex, 10));
-      if (savedDownloadFormat) setDownloadFormat(savedDownloadFormat as any);
+        if (savedSelectedFile) setSelectedFile(JSON.parse(savedSelectedFile));
+        if (savedResumeText) setResumeText(savedResumeText);
+        if (savedJobDesc) setJobDescription(savedJobDesc);
+        if (savedOptimizedData) setOptimizedData(JSON.parse(savedOptimizedData));
+        if (savedBase64) setUploadedFileBase64(savedBase64);
+        if (savedSelectedTemplate) setSelectedTemplate(savedSelectedTemplate as typeof selectedTemplate);
+        if (savedActiveResultTab) setActiveResultTab(savedActiveResultTab as typeof activeResultTab);
+        if (savedDiffIndex) setDiffIndex(parseInt(savedDiffIndex, 10));
+        if (savedDownloadFormat) setDownloadFormat(savedDownloadFormat as typeof downloadFormat);
+      }, 0);
     } catch (e) {
       console.error("Failed to restore session state:", e);
     }
@@ -248,6 +225,7 @@ function DashboardContent() {
         handleDownload();
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   // Save state to sessionStorage when states change
@@ -295,6 +273,7 @@ function DashboardContent() {
         })
         .catch((err) => console.error("Error auto-saving resume:", err));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, user, hasSavedThisRun, optimizedData]);
 
   // Track step-based funnel progress for drop-offs
@@ -381,10 +360,11 @@ function DashboardContent() {
             setResumeText(result.value);
             setUploadedFileBase64(null);
             posthog.capture("resume_upload_success", { file_type: "docx" });
-          } catch (err: any) {
-            console.error("Docx parsing error:", err);
+          } catch (err) {
+            const error = err as Error;
+            console.error("Docx parsing error:", error);
             setApiError("Failed to parse DOCX file content.");
-            posthog.capture("resume_upload_failed", { file_type: "docx", error: err.message || "Failed to parse DOCX file content." });
+            posthog.capture("resume_upload_failed", { file_type: "docx", error: error.message || "Failed to parse DOCX file content." });
           } finally {
             setIsParsing(false);
           }
@@ -401,11 +381,12 @@ function DashboardContent() {
         setIsParsing(false);
         posthog.capture("resume_upload_failed", { file_type: fileExt, error: "Unsupported file format." });
       }
-    } catch (err: any) {
-      console.error("File processing error:", err);
+    } catch (err) {
+      const error = err as Error;
+      console.error("File processing error:", error);
       setApiError("An error occurred while processing the file.");
       setIsParsing(false);
-      posthog.capture("resume_upload_failed", { file_name: file.name, error: err.message || "An error occurred while processing the file." });
+      posthog.capture("resume_upload_failed", { file_name: file.name, error: error.message || "An error occurred while processing the file." });
     }
   };
   const handleDrop = (e: React.DragEvent) => {
@@ -463,7 +444,7 @@ function DashboardContent() {
             stored = parsed;
           }
         }
-      } catch (e) {}
+      } catch {}
 
       if (stored.count >= 3) {
         setApiError("You have reached your limit of 3 free AI optimizations for today. Please try again tomorrow.");
@@ -594,7 +575,7 @@ function DashboardContent() {
               stored = parsed;
             }
           }
-        } catch (e) {}
+        } catch {}
         stored.count += 1;
         localStorage.setItem("atsprime_daily_optimizations", JSON.stringify(stored));
       }
@@ -606,23 +587,24 @@ function DashboardContent() {
         setStep(4);
       }, 500);
 
-    } catch (err: any) {
+    } catch (err) {
+      const error = err as Error;
       clearInterval(progressInterval);
-      console.error("Gemini optimization error:", err);
+      console.error("Gemini optimization error:", error);
       posthog.capture("optimization_failed", {
-        error: err.message || "An unexpected error occurred during optimization."
+        error: error.message || "An unexpected error occurred during optimization."
       });
-      if (err.message === "RATE_LIMIT_429") {
+      if (error.message === "RATE_LIMIT_429") {
         setApiError("The AI engine is currently experiencing heavy traffic. Please wait 10 seconds and click Optimize again to retry.");
       } else {
-        setApiError(err.message || "An unexpected error occurred during optimization.");
+        setApiError(error.message || "An unexpected error occurred during optimization.");
       }
       setStep(2); // Go back to Job Description
     }
   };
 
   // Handle dynamic download of the tailored resume as PDF/DOCX via server API
-  const handleDownload = async (formatOverride?: "pdf" | "docx"): Promise<boolean> => {
+  async function handleDownload(formatOverride?: "pdf" | "docx"): Promise<boolean> {
     const activeFormat = formatOverride || downloadFormat;
 
     if (!user) {
@@ -714,8 +696,9 @@ function DashboardContent() {
         setDownloadingPdf(false);
         return true;
       }
-    } catch (err: any) {
-      console.error("Download error:", err);
+     } catch (err) {
+      const error = err as Error;
+      console.error("Download error:", error);
       
       if (activeFormat === "pdf") {
         try {
@@ -744,7 +727,7 @@ function DashboardContent() {
 
             setDownloadSuccess(true);
             setDownloadingPdf(false);
-            setApiError(`Headless PDF compiler failed: ${err.message}. Opened browser print dialog as secure fallback.`);
+            setApiError(`Headless PDF compiler failed: ${error.message}. Opened browser print dialog as secure fallback.`);
             return true;
           }
         } catch (printErr) {
@@ -752,7 +735,7 @@ function DashboardContent() {
         }
       }
 
-      setApiError(err.message || `Failed to download resume ${activeFormat.toUpperCase()}.`);
+      setApiError(error.message || `Failed to download resume ${activeFormat.toUpperCase()}.`);
       setDownloadingPdf(false);
       return false;
     }
@@ -829,6 +812,7 @@ function DashboardContent() {
                   className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-zinc-300 hover:text-white transition-colors rounded-sm bg-zinc-900 border border-hairline hover:bg-zinc-850 cursor-pointer"
                 >
                   {user.avatarUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={user.avatarUrl} alt="Avatar" className="h-5 w-5 rounded-full object-cover border border-violet/30" />
                   ) : (
                     <div className="h-5 w-5 rounded-full bg-violet/20 border border-violet/30 text-violet flex items-center justify-center text-[10px] font-bold uppercase">
@@ -1509,7 +1493,7 @@ function DashboardContent() {
                               {templates.map((tpl) => (
                                 <div
                                   key={tpl.id}
-                                  onClick={() => setSelectedTemplate(tpl.id as any)}
+                                  onClick={() => setSelectedTemplate(tpl.id as typeof selectedTemplate)}
                                   className={`
                                     p-3 rounded-md border cursor-pointer transition-all duration-150 text-left
                                     ${

@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Lock, Mail, User, ArrowLeft } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
@@ -30,17 +30,22 @@ function LoginContent() {
   }
 
   // Auth Card States: "signin" | "signup" | "forgot" | "verify"
-  const [mode, setMode] = useState<"signin" | "signup" | "forgot" | "verify">("signin");
+  const authParam = searchParams.get("auth");
+  const initialMode = authParam === "signup" || mockAuth ? "signup" : (authParam === "signin" ? "signin" : "signin");
+
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot" | "verify">(initialMode);
   const [otpCode, setOtpCode] = useState("");
 
-  useEffect(() => {
-    const authParam = searchParams.get("auth");
-    if (authParam === "signup") {
+  const currentAuthParam = searchParams.get("auth");
+  const [prevAuthParam, setPrevAuthParam] = useState(currentAuthParam);
+  if (currentAuthParam !== prevAuthParam) {
+    setPrevAuthParam(currentAuthParam);
+    if (currentAuthParam === "signup") {
       setMode("signup");
-    } else if (authParam === "signin") {
+    } else if (currentAuthParam === "signin") {
       setMode("signin");
     }
-  }, [searchParams]);
+  }
   
   // Inputs
   const [fullName, setFullName] = useState("");
@@ -139,7 +144,7 @@ function LoginContent() {
           setErrorMessage(formatError(res.error));
         }
       }
-    } catch (err) {
+    } catch {
       setErrorMessage("Authentication process encountered an unexpected issue.");
     } finally {
       setSubmitting(false);
@@ -159,7 +164,7 @@ function LoginContent() {
       } else {
         setErrorMessage(formatError(res.error));
       }
-    } catch (err) {
+    } catch {
       setErrorMessage("Could not resend verification code.");
     } finally {
       setSubmitting(false);
@@ -182,7 +187,7 @@ function LoginContent() {
       } else {
         setErrorMessage(formatError(res.error));
       }
-    } catch (err) {
+    } catch {
       setErrorMessage("Google connection failed.");
     } finally {
       setSubmitting(false);
@@ -503,7 +508,7 @@ function LoginContent() {
                   disabled={submitting}
                   className="text-xs font-semibold text-violet hover:text-violet-soft transition-colors cursor-pointer disabled:text-zinc-600 disabled:cursor-not-allowed"
                 >
-                  Didn't receive the code? Resend Code
+                  Didn&apos;t receive the code? Resend Code
                 </button>
                 <button
                   type="button"

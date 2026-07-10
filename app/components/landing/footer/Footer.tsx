@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Github, Linkedin, Sparkles } from "lucide-react";
+import { Github, Linkedin } from "lucide-react";
 import FooterColumn from "./FooterColumn";
 
 const XIcon = ({ size = 18, className = "" }: { size?: number; className?: string }) => (

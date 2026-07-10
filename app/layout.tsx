@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "ATSPrime - Your Resume's AI Copilot",
   description: "Transform your resume with AI-powered optimization. Get real-time ATS scoring, cover letter generation, and professional insights.",
   icons: {

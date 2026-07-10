@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     let activeResumeText = resumeText;
     if (uploadedFileBase64) {
       try {
-        const { getDocumentProxy, extractText } = require("unpdf");
+        const { getDocumentProxy, extractText } = await import("unpdf");
         const pdfBuffer = Buffer.from(uploadedFileBase64, "base64");
         
         // Convert Node Buffer to Uint8Array required by unpdf
@@ -16,10 +16,11 @@ export async function POST(request: Request) {
         const pdf = await getDocumentProxy(pdfArray);
         const { text } = await extractText(pdf, { mergePages: true });
         activeResumeText = text;
-      } catch (err: any) {
-        console.error("Error extracting text from PDF resume using unpdf:", err);
+      } catch (err) {
+        const error = err as Error;
+        console.error("Error extracting text from PDF resume using unpdf:", error);
         return NextResponse.json(
-          { error: { message: `Failed to extract text from PDF resume: ${err.message}` } },
+          { error: { message: `Failed to extract text from PDF resume: ${error.message}` } },
           { status: 400 }
         );
       }
@@ -104,7 +105,7 @@ Return the analysis response as a single JSON object matching the provided respo
     const systemInstructionText = `You are the AI engine behind ATSPrime, an AI-powered ATS resume optimization platform. Your task is to analyze resumes against a target job description, improve ATS compatibility, preserve factual accuracy, quantify achievements where possible, optimize keywords naturally, and produce recruiter-friendly, truthful content. Never invent experience or skills. Maintain professional formatting and concise, impactful bullet points.`;
 
     // 3 & 4. Use the v1beta endpoint (needed for gemini-2.5-flash schemas) and implement retry logic for HTTP 429
-    const callGemini = async (attempt = 1): Promise<{ ok: boolean; status: number; data?: any; error?: any }> => {
+    const callGemini = async (attempt = 1): Promise<{ ok: boolean; status: number; data?: unknown; error?: { message?: string } }> => {
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
         {
@@ -174,11 +175,11 @@ Return the analysis response as a single JSON object matching the provided respo
       );
 
       if (!res.ok) {
-        let errData: any = {};
+        let errData: { error?: { message?: string } } = {};
         try {
           errData = await res.json();
-        } catch (e) {}
-
+        } catch {}
+ 
         const status = res.status;
         const errorMessage = errData.error?.message || "";
 
@@ -231,10 +232,11 @@ Return the analysis response as a single JSON object matching the provided respo
 
     console.log("[GEMINI STATUS]: SUCCESS (Successfully connected to Gemini 2.5 Flash API. Returning optimized data.)");
     return NextResponse.json(result.data);
-  } catch (err: any) {
-    console.error("API route optimization error:", err);
+  } catch (err) {
+    const error = err as Error;
+    console.error("API route optimization error:", error);
     return NextResponse.json(
-      { error: { message: err.message || "An unexpected error occurred." } },
+      { error: { message: error.message || "An unexpected error occurred." } },
       { status: 500 }
     );
   }

@@ -5,20 +5,16 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkles,
   Lock,
   Download,
-  ArrowLeft,
   Briefcase,
   GraduationCap,
   Wrench,
   FolderGit2,
   Award,
-  ChevronRight,
   Plus,
   Trash2,
   Globe,
-  Link as LinkIcon,
   Crown,
   Grid,
   Edit3,
@@ -140,14 +136,13 @@ function BuilderContent() {
     searchParams.get("view") === "gallery" ? "gallery" : "editor"
   );
 
-  useEffect(() => {
-    const view = searchParams.get("view");
-    if (view === "gallery") {
-      setViewMode("gallery");
-    } else if (view === "editor") {
-      setViewMode("editor");
-    }
-  }, [searchParams]);
+  const currentViewParam = searchParams.get("view") === "gallery" ? "gallery" : "editor";
+  const [prevViewParam, setPrevViewParam] = useState(currentViewParam);
+  if (currentViewParam !== prevViewParam) {
+    setPrevViewParam(currentViewParam);
+    setViewMode(currentViewParam);
+  }
+
   const [activeTab, setActiveTab] = useState<"personal" | "summary" | "experience" | "education" | "skills" | "projects" | "achievements">("personal");
   const [selectedTemplate, setSelectedTemplate] = useState(() => {
     const tpl = searchParams.get("template");
@@ -157,30 +152,19 @@ function BuilderContent() {
     return "classic";
   });
 
-  useEffect(() => {
-    const tpl = searchParams.get("template");
-    if (tpl && templatesList.some(t => t.id === tpl)) {
-      setSelectedTemplate(tpl);
+  const currentTemplateParam = searchParams.get("template");
+  const [prevTemplateParam, setPrevTemplateParam] = useState(currentTemplateParam);
+  if (currentTemplateParam !== prevTemplateParam) {
+    setPrevTemplateParam(currentTemplateParam);
+    if (currentTemplateParam && templatesList.some(t => t.id === currentTemplateParam)) {
+      setSelectedTemplate(currentTemplateParam);
     }
-  }, [searchParams]);
+  }
+
   const [resumeData, setResumeData] = useState<ResumeData>(initialResumeData);
   const [savedResumeData, setSavedResumeData] = useState<ResumeData>(initialResumeData);
-  const [isDirty, setIsDirty] = useState(false);
-  const [isPro, setIsPro] = useState(true);
-  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
-  const [downloadingPdf, setDownloadingPdf] = useState(false);
-  const [downloadFormat, setDownloadFormat] = useState<"pdf" | "docx">("pdf");
-  const [downloadDropdownOpen, setDownloadDropdownOpen] = useState(false);
-  const [triggerDownloadAfterRestore, setTriggerDownloadAfterRestore] = useState(false);
-
-  // Set isDirty to true when current resumeData differs from savedResumeData
-  useEffect(() => {
-    if (JSON.stringify(resumeData) !== JSON.stringify(savedResumeData)) {
-      setIsDirty(true);
-    } else {
-      setIsDirty(false);
-    }
-  }, [resumeData, savedResumeData]);
+  
+  const isDirty = JSON.stringify(resumeData) !== JSON.stringify(savedResumeData);
 
   // Warn on page unload/reload if there are unsaved edits
   useEffect(() => {
@@ -197,10 +181,11 @@ function BuilderContent() {
     };
   }, [isDirty]);
 
-  // No subscription check needed - application is free
-  useEffect(() => {
-    setIsPro(true);
-  }, []);
+  const [isPro, setIsPro] = useState(true);
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [downloadFormat, setDownloadFormat] = useState<"pdf" | "docx">("pdf");
+  const [downloadDropdownOpen, setDownloadDropdownOpen] = useState(false);
 
   // Track template selections in the builder
   useEffect(() => {
@@ -482,8 +467,9 @@ function BuilderContent() {
         setSavedResumeData(resumeData);
         setDownloadingPdf(false);
       }
-    } catch (err: any) {
-      console.error("Export error:", err);
+    } catch (err) {
+      const error = err as Error;
+      console.error("Export error:", error);
       
       if (activeFormat === "pdf") {
         try {
@@ -496,7 +482,7 @@ function BuilderContent() {
           const Creative = (await import("@/app/components/resume/templates/Creative")).default;
           const Corporate = (await import("@/app/components/resume/templates/Corporate")).default;
 
-          const serverTemplateComponents: Record<string, React.ComponentType<any>> = {
+          const serverTemplateComponents: Record<string, React.ComponentType<{ data: ResumeData }>> = {
             classic: ATSClassic,
             modern: Modern,
             executive: Executive,
@@ -579,7 +565,7 @@ function BuilderContent() {
 
             setSavedResumeData(resumeData);
             setDownloadingPdf(false);
-            alert(`Headless PDF compiler failed: ${err.message}. Opened browser print dialog as secure fallback.`);
+            alert(`Headless PDF compiler failed: ${error.message}. Opened browser print dialog as secure fallback.`);
             return;
           }
         } catch (printErr) {
@@ -587,7 +573,7 @@ function BuilderContent() {
         }
       }
       
-      alert(err.message || `Failed to download resume ${activeFormat.toUpperCase()}.`);
+      alert(error.message || `Failed to download resume ${activeFormat.toUpperCase()}.`);
       setDownloadingPdf(false);
     }
   };
@@ -605,48 +591,50 @@ function BuilderContent() {
     if (pendingDataStr) {
       try {
         const parsedData = JSON.parse(pendingDataStr);
-        setResumeData(parsedData);
-        setSavedResumeData(parsedData);
-        
-        if (pendingTemplate) {
-          setSelectedTemplate(pendingTemplate);
-        }
-        if (pendingViewMode === "gallery" || pendingViewMode === "editor") {
-          setViewMode(pendingViewMode as "gallery" | "editor");
-        }
-        if (pendingActiveTab) {
-          setActiveTab(pendingActiveTab as any);
-        }
-
-        // Clean up from localStorage
+        // Clean up from localStorage immediately
         localStorage.removeItem("pending_resume_data");
         localStorage.removeItem("pending_template");
         localStorage.removeItem("pending_view_mode");
         localStorage.removeItem("pending_active_tab");
 
-        if (pendingDownloadTrigger === "true" && user) {
+        const shouldDownload = pendingDownloadTrigger === "true" && !!user;
+        let savedFormat: "pdf" | "docx" | null = null;
+        if (shouldDownload) {
           localStorage.removeItem("pending_download_trigger");
-          const savedFormat = localStorage.getItem("pending_download_format") as "pdf" | "docx" | null;
+          savedFormat = localStorage.getItem("pending_download_format") as "pdf" | "docx" | null;
           if (savedFormat) {
             localStorage.removeItem("pending_download_format");
-            setDownloadFormat(savedFormat);
           }
-          setTriggerDownloadAfterRestore(true);
         } else {
           localStorage.removeItem("pending_download_trigger");
         }
+
+        setTimeout(() => {
+          setResumeData(parsedData);
+          setSavedResumeData(parsedData);
+          
+          if (pendingTemplate) {
+            setSelectedTemplate(pendingTemplate);
+          }
+          if (pendingViewMode === "gallery" || pendingViewMode === "editor") {
+            setViewMode(pendingViewMode as "gallery" | "editor");
+          }
+          if (pendingActiveTab) {
+            setActiveTab(pendingActiveTab as typeof activeTab);
+          }
+          if (shouldDownload) {
+            if (savedFormat) {
+              setDownloadFormat(savedFormat);
+            }
+            handleDownload(savedFormat || undefined);
+          }
+        }, 0);
       } catch (e) {
         console.error("Failed to restore pending resume data", e);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
-
-  useEffect(() => {
-    if (triggerDownloadAfterRestore && user) {
-      setTriggerDownloadAfterRestore(false);
-      handleDownload(downloadFormat);
-    }
-  }, [triggerDownloadAfterRestore, user, downloadFormat]);
 
   const ActiveTemplate = templateComponents[selectedTemplate] || templateComponents.classic;
 

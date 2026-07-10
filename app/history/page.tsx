@@ -10,10 +10,7 @@ import {
   LogOut, 
   Plus, 
   User as UserIcon, 
-  CreditCard, 
   Settings as SettingsIcon,
-  ChevronRight,
-  Sparkles,
   ArrowLeft,
   FileText,
   Calendar,
@@ -70,6 +67,7 @@ export default function HistoryPage() {
                   className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-zinc-300 hover:text-white transition-colors rounded-sm bg-zinc-900 border border-hairline hover:bg-zinc-850 cursor-pointer"
                 >
                   {user.avatarUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={user.avatarUrl} alt="Avatar" className="h-5 w-5 rounded-full object-cover border border-violet/30" />
                   ) : (
                     <div className="h-5 w-5 rounded-full bg-violet/20 border border-violet/30 text-violet flex items-center justify-center text-[10px] font-bold uppercase">

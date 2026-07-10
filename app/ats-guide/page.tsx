@@ -2,7 +2,7 @@
 
 import Navbar from "../components/landing/Navbar";
 import Footer from "../components/landing/footer/Footer";
-import { BookOpen, FileText, CheckCircle2, ChevronRight, Zap } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function AtsGuidePage() {

@@ -12,7 +12,7 @@ import "../sentry.client.config";
 const isTestingEnvironment = (): boolean => {
   if (typeof window !== "undefined") {
     const params = new URLSearchParams(window.location.search);
-    return params.get("mock_auth") === "true" || !!(window.navigator as any).webdriver;
+    return params.get("mock_auth") === "true" || !!(window.navigator as unknown as Record<string, unknown>).webdriver;
   }
   return false;
 };
@@ -26,7 +26,7 @@ const isPlaceholderKey = (key: string | undefined): boolean => {
 
 if (typeof window !== "undefined") {
   const phKey = process.env.NEXT_PUBLIC_POSTHOG_KEY || "phc_placeholder_key_for_testing";
-  (window as any).__POSTHOG_KEY__ = phKey;
+  (window as unknown as Record<string, unknown>).__POSTHOG_KEY__ = phKey;
   const phHost = process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com";
   
   if (phKey && !isPlaceholderKey(phKey)) {
@@ -40,7 +40,7 @@ if (typeof window !== "undefined") {
         }
       },
     });
-    (window as any).posthog = posthog;
+    (window as unknown as Record<string, unknown>).posthog = posthog;
   }
 }
 

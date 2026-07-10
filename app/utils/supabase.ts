@@ -18,6 +18,6 @@ if (!isConfigured) {
 
 export const supabase: SupabaseClient = isConfigured
   ? createClient(supabaseUrl, supabaseAnonKey)
-  : (null as any);
+  : (null as unknown as SupabaseClient);
 
 export { isConfigured as isSupabaseConfigured };

@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       }
     };
 
-    const docChildren: any[] = [];
+    const docChildren: Paragraph[] = [];
 
     // Header: Name (Bold, Center)
     docChildren.push(
@@ -205,10 +205,11 @@ export async function POST(request: Request) {
       status: 200,
       headers
     });
-  } catch (err: any) {
-    console.error("API route DOCX generation error:", err);
+  } catch (err) {
+    const error = err as Error;
+    console.error("API route DOCX generation error:", error);
     return NextResponse.json(
-      { error: { message: err.message || "An unexpected error occurred during DOCX generation." } },
+      { error: { message: error.message || "An unexpected error occurred during DOCX generation." } },
       { status: 500 }
     );
   }

@@ -44,7 +44,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [savedResumes, setSavedResumes] = useState<SavedResume[]>([]);
   const [loading, setLoading] = useState(true);
-  const [useSupabase, setUseSupabase] = useState(false);
+  const [useSupabase] = useState(() => {
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const forceMock = searchParams.get("mock_auth") === "true";
+      return isSupabaseConfigured && !forceMock;
+    }
+    return false;
+  });
 
   // Helper to format Date string
   const formatDate = (dateStr: string) => {
@@ -59,12 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // 1. Initial Session Loader & Auth Listener
   useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    const forceMock = searchParams.get("mock_auth") === "true";
-    const configured = isSupabaseConfigured && !forceMock;
-    setUseSupabase(configured);
-
-    if (configured) {
+    if (useSupabase) {
       // Synchronous guest loader bypass: if no active session storage tokens exist, resolve loading immediately
       const hasSession = typeof window !== "undefined" && (() => {
         for (let i = 0; i < localStorage.length; i++) {
@@ -77,15 +79,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })();
 
       if (!hasSession) {
-        setLoading(false);
+        setTimeout(() => setLoading(false), 0);
       }
 
-      const loadProfileAndSetUser = async (sessionUser: any) => {
+      const loadProfileAndSetUser = async (sessionUser: { id: string; email?: string; user_metadata?: { full_name?: string; name?: string; avatar_url?: string } }) => {
         let name = sessionUser.user_metadata?.full_name || sessionUser.user_metadata?.name || sessionUser.email?.split("@")[0] || "";
         let avatarUrl = sessionUser.user_metadata?.avatar_url || undefined;
 
         try {
-          const { data, error } = await supabase
+          const { data } = await supabase
             .from("profiles")
             .select("name, avatar_url")
             .eq("id", sessionUser.id)
@@ -131,29 +133,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
     } else {
       // Fallback: LocalStorage Session
-      try {
-        const activeSession = localStorage.getItem("atsprime_session");
-        if (activeSession) {
-          const parsedUser = JSON.parse(activeSession) as User;
-          setUser(parsedUser);
-          
-          const userResumes = localStorage.getItem(`atsprime_resumes_${parsedUser.email}`);
-          if (userResumes) {
-            setSavedResumes(JSON.parse(userResumes) as SavedResume[]);
+      setTimeout(() => {
+        try {
+          const activeSession = localStorage.getItem("atsprime_session");
+          if (activeSession) {
+            const parsedUser = JSON.parse(activeSession) as User;
+            setUser(parsedUser);
+            
+            const userResumes = localStorage.getItem(`atsprime_resumes_${parsedUser.email}`);
+            if (userResumes) {
+              setSavedResumes(JSON.parse(userResumes) as SavedResume[]);
+            }
           }
+        } catch (error) {
+          console.warn("Error reading session from localStorage", error);
+        } finally {
+          setLoading(false);
         }
-      } catch (error) {
-        console.warn("Error reading session from localStorage", error);
-      } finally {
-        setLoading(false);
-      }
+      }, 0);
     }
-  }, []);
+  }, [useSupabase]);
 
   // 2. Fetch resumes from DB when user is logged in
   useEffect(() => {
     if (!user) {
-      setSavedResumes([]);
+      setTimeout(() => {
+        setSavedResumes([]);
+      }, 0);
       return;
     }
 
@@ -171,7 +177,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
 
           if (data) {
-            const formattedResumes: SavedResume[] = data.map((row: any) => ({
+            interface ResumeRow {
+              id: string;
+              job_title: string;
+              original_text: string;
+              tailored_text: string;
+              score: number;
+              optimized_data_string?: string;
+              created_at: string;
+            }
+            const formattedResumes: SavedResume[] = data.map((row: ResumeRow) => ({
               id: row.id,
               jobTitle: row.job_title,
               originalText: row.original_text,
@@ -182,20 +197,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }));
             setSavedResumes(formattedResumes);
           }
-        } catch (err: any) {
-          console.warn("Network error fetching resumes from Supabase:", err.message || err);
+        } catch (err) {
+          const error = err as Error;
+          console.warn("Network error fetching resumes from Supabase:", error.message || error);
         }
       };
 
       fetchResumes();
     } else {
       // Fallback: Fetch resumes from localStorage
-      const userResumes = localStorage.getItem(`atsprime_resumes_${user.email}`);
-      if (userResumes) {
-        setSavedResumes(JSON.parse(userResumes) as SavedResume[]);
-      } else {
-        setSavedResumes([]);
-      }
+      setTimeout(() => {
+        const userResumes = localStorage.getItem(`atsprime_resumes_${user.email}`);
+        if (userResumes) {
+          setSavedResumes(JSON.parse(userResumes) as SavedResume[]);
+        } else {
+          setSavedResumes([]);
+        }
+      }, 0);
     }
   }, [user, useSupabase]);
 
@@ -232,7 +250,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         return { success: true };
-      } catch (err) {
+      } catch {
         return { success: false, error: "An error occurred during sign-up." };
       }
     } else {
@@ -260,7 +278,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(newUser);
 
         return { success: true };
-      } catch (err) {
+      } catch {
         return { success: false, error: "An unexpected error occurred during sign-up." };
       }
     }
@@ -282,7 +300,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         return { success: true };
-      } catch (err) {
+      } catch {
         return { success: false, error: "An error occurred during Google sign-in." };
       }
     } else {
@@ -296,7 +314,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("atsprime_session", JSON.stringify(mockUser));
         setUser(mockUser);
         return { success: true };
-      } catch (err) {
+      } catch {
         return { success: false, error: "An unexpected error occurred during Google sign-in." };
       }
     }
@@ -315,7 +333,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         return { success: true };
-      } catch (err) {
+      } catch {
         return { success: false, error: "An error occurred while sending reset email." };
       }
     } else {
@@ -336,7 +354,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         return { success: true };
-      } catch (err) {
+      } catch {
         return { success: false, error: "An error occurred while updating password." };
       }
     } else {
@@ -386,7 +404,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         return { success: true };
-      } catch (err) {
+      } catch {
         return { success: false, error: "An error occurred during sign-in." };
       }
     } else {
@@ -411,7 +429,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(activeUser);
 
         return { success: true };
-      } catch (err) {
+      } catch {
         return { success: false, error: "An unexpected error occurred during sign-in." };
       }
     }
@@ -614,8 +632,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         return { success: true };
-      } catch (err: any) {
-        return { success: false, error: err.message || "Failed to update profile." };
+      } catch (err) {
+        const error = err as Error;
+        return { success: false, error: error.message || "Failed to update profile." };
       }
     } else {
       // Fallback: LocalStorage Session
@@ -628,7 +647,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(updated);
         }
         return { success: true };
-      } catch (err: any) {
+      } catch {
         return { success: false, error: "Failed to update profile sandbox." };
       }
     }
@@ -658,21 +677,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         await signOut();
         return { success: true };
-      } catch (err: any) {
-        console.warn("Error during Supabase account deletion:", err);
-        return { success: false, error: err.message || "Failed to delete account from database." };
+      } catch (err) {
+        const error = err as Error;
+        console.warn("Error during Supabase account deletion:", error);
+        return { success: false, error: error.message || "Failed to delete account from database." };
       }
     } else {
       // Fallback: LocalStorage Mock Delete
       try {
         const usersStr = localStorage.getItem("atsprime_users") || "[]";
-        const users = JSON.parse(usersStr) as any[];
+        const users = JSON.parse(usersStr) as { email: string }[];
         const filtered = users.filter((u) => u.email !== user.email);
         localStorage.setItem("atsprime_users", JSON.stringify(filtered));
         localStorage.removeItem(`atsprime_resumes_${user.email}`);
         await signOut();
         return { success: true };
-      } catch (err: any) {
+      } catch {
         return { success: false, error: "Failed to delete mock account." };
       }
     }
@@ -719,8 +739,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         return { success: true };
-      } catch (err: any) {
-        return { success: false, error: err.message || "Failed to verify code." };
+      } catch (err) {
+        const error = err as Error;
+        return { success: false, error: error.message || "Failed to verify code." };
       }
     } else {
       // Fallback: LocalStorage Mock OTP Verification (use 123456 for mock sandbox testing)
@@ -737,7 +758,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return { success: true };
         }
         return { success: false, error: "Invalid verification code. Use 123456 for sandbox testing." };
-      } catch (err) {
+      } catch {
         return { success: false, error: "An unexpected error occurred during OTP verification." };
       }
     }
@@ -757,8 +778,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         return { success: true };
-      } catch (err: any) {
-        return { success: false, error: err.message || "Failed to resend verification code." };
+      } catch (err) {
+        const error = err as Error;
+        return { success: false, error: error.message || "Failed to resend verification code." };
       }
     } else {
       // Fallback: Mock Resend Sandbox

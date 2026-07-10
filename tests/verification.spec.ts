@@ -11,17 +11,17 @@ test("Verify Sentry and PostHog initialization", async ({ page }) => {
 
   // 1. Verify that Sentry SDK is loaded and initialized (window.__SENTRY__ exists)
   const isSentryInitialized = await page.evaluate(() => {
-    return typeof (window as any).__SENTRY__ !== "undefined";
+    return typeof (window as unknown as Record<string, unknown>).__SENTRY__ !== "undefined";
   });
 
   // 2. Verify that PostHog key is loaded on the client side
   const phKey = await page.evaluate(() => {
-    return (window as any).__POSTHOG_KEY__;
+    return (window as unknown as Record<string, unknown>).__POSTHOG_KEY__;
   });
 
   // 3. Verify that PostHog itself did not initialize in testing environment
   const isPostHogInitialized = await page.evaluate(() => {
-    return typeof (window as any).posthog !== "undefined";
+    return typeof (window as unknown as Record<string, unknown>).posthog !== "undefined";
   });
 
   console.log("=== Verification Results ===");

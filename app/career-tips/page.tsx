@@ -2,7 +2,7 @@
 
 import Navbar from "../components/landing/Navbar";
 import Footer from "../components/landing/footer/Footer";
-import { Sparkles, CheckCircle2, ChevronRight } from "lucide-react";
+import { Sparkles, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 

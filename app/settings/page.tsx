@@ -10,10 +10,7 @@ import {
   Plus, 
   History, 
   User as UserIcon, 
-  CreditCard,
-  Sliders,
-  Eye,
-  Trash2,
+  Trash2, 
   ArrowLeft,
   AlertTriangle
 } from "lucide-react";
@@ -51,8 +48,9 @@ export default function SettingsPage() {
       } else {
         setDeleteError(res.error || "Failed to delete account.");
       }
-    } catch (err: any) {
-      setDeleteError(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      const error = err as Error;
+      setDeleteError(error.message || "An unexpected error occurred.");
     } finally {
       setDeleting(false);
     }
@@ -89,6 +87,7 @@ export default function SettingsPage() {
                   className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-zinc-300 hover:text-white transition-colors rounded-sm bg-zinc-900 border border-hairline hover:bg-zinc-850 cursor-pointer"
                 >
                   {user.avatarUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={user.avatarUrl} alt="Avatar" className="h-5 w-5 rounded-full object-cover border border-violet/30" />
                   ) : (
                     <div className="h-5 w-5 rounded-full bg-violet/20 border border-violet/30 text-violet flex items-center justify-center text-[10px] font-bold uppercase">

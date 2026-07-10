@@ -1,20 +1,17 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  User as UserIcon, 
-  ChevronDown, 
-  LogOut, 
-  Plus, 
-  History, 
-  CreditCard, 
+import {
+  User as UserIcon,
+  ChevronDown,
+  LogOut,
+  Plus,
+  History,
   Settings as SettingsIcon,
   Mail,
   Shield,
-  Calendar,
-  Sparkles,
   ArrowLeft,
   Camera
 } from "lucide-react";
@@ -23,7 +20,7 @@ import { useAuth } from "../context/AuthContext";
 export default function ProfilePage() {
   const { user, signOut, updateProfile, useSupabase, savedResumes } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  
+
   const [name, setName] = useState(user?.name || "");
   const [avatar, setAvatar] = useState(user?.avatarUrl || "");
   const [saving, setSaving] = useState(false);
@@ -31,12 +28,16 @@ export default function ProfilePage() {
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  const [prevUser, setPrevUser] = useState(user);
+  if (user !== prevUser) {
+    setPrevUser(user);
     if (user) {
-      setName(user.name || "");
-      setAvatar(user.avatarUrl || "");
+      setName(user.name ?? "");
+      setAvatar(user.avatarUrl ?? "");
     }
-  }, [user]);
+  }
+
+
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -68,8 +69,9 @@ export default function ProfilePage() {
       } else {
         setError(res.error || "Failed to update profile.");
       }
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      const error = err as Error;
+      setError(error.message || "An unexpected error occurred.");
     } finally {
       setSaving(false);
     }
@@ -106,6 +108,7 @@ export default function ProfilePage() {
                   className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-zinc-300 hover:text-white transition-colors rounded-sm bg-zinc-900 border border-hairline hover:bg-zinc-850 cursor-pointer"
                 >
                   {user.avatarUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={user.avatarUrl} alt="Avatar" className="h-5 w-5 rounded-full object-cover border border-violet/30" />
                   ) : (
                     <div className="h-5 w-5 rounded-full bg-violet/20 border border-violet/30 text-violet flex items-center justify-center text-[10px] font-bold uppercase">
@@ -202,11 +205,12 @@ export default function ProfilePage() {
             >
               {/* Header profile initials avatar */}
               <div className="flex flex-col sm:flex-row sm:items-center gap-6 border-b border-hairline dark:border-zinc-800 pb-6">
-                <div 
+                <div
                   onClick={() => fileInputRef.current?.click()}
                   className="relative h-20 w-20 rounded-full overflow-hidden cursor-pointer group shadow-sm flex-shrink-0"
                 >
                   {avatar ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={avatar} alt="Avatar" className="h-full w-full object-cover" />
                   ) : (
                     <div className="h-full w-full bg-gradient-to-tr from-violet to-highlight-pink flex items-center justify-center text-white text-2xl font-bold uppercase">
@@ -223,18 +227,18 @@ export default function ProfilePage() {
                 <div className="flex-1">
                   <h3 className="text-sm font-bold text-white">{name || "ATSPrime User"}</h3>
                   <p className="text-xs text-zinc-500 mb-2">{user.email}</p>
-                  <button 
+                  <button
                     onClick={() => fileInputRef.current?.click()}
                     className="px-2.5 py-1 text-[10px] font-semibold border border-hairline dark:border-zinc-800 text-zinc-300 hover:text-white rounded hover:bg-zinc-800 transition-colors cursor-pointer"
                   >
                     Upload Photo
                   </button>
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    onChange={handleFileChange} 
-                    accept="image/*" 
-                    className="hidden" 
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    accept="image/*"
+                    className="hidden"
                   />
                 </div>
               </div>
@@ -258,10 +262,10 @@ export default function ProfilePage() {
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500">
                       <Mail size={13} />
                     </div>
-                    <input 
-                      type="text" 
-                      value={user.email} 
-                      disabled 
+                    <input
+                      type="text"
+                      value={user.email}
+                      disabled
                       className="w-full h-9 rounded-sm bg-zinc-950/50 border border-hairline dark:border-zinc-900/80 pl-9 pr-3 text-xs text-zinc-500 cursor-not-allowed outline-none"
                     />
                   </div>
@@ -273,12 +277,12 @@ export default function ProfilePage() {
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
                       <UserIcon size={13} />
                     </div>
-                    <input 
+                    <input
                       id="profile-name-input"
-                      type="text" 
-                      value={name} 
-                      onChange={(e) => setName(e.target.value)} 
-                      placeholder="Enter your name" 
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Enter your name"
                       required
                       className="w-full h-9 rounded-sm bg-zinc-950 border border-hairline dark:border-zinc-800/80 focus:border-zinc-650 pl-9 pr-3 text-xs text-white placeholder-zinc-700 outline-none transition-colors"
                     />
@@ -294,9 +298,9 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="border-t border-hairline dark:border-zinc-800 pt-4 flex justify-end">
-                  <button 
-                    type="submit" 
-                    disabled={saving} 
+                  <button
+                    type="submit"
+                    disabled={saving}
                     className="px-4 py-1.5 text-xs font-semibold bg-primary hover:bg-zinc-250 disabled:bg-zinc-800 disabled:text-zinc-600 disabled:cursor-not-allowed text-on-primary rounded-sm transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                   >
                     {saving ? (
@@ -320,7 +324,7 @@ export default function ProfilePage() {
               className="rounded-lg border border-hairline dark:border-zinc-900 bg-zinc-900/30 p-6 space-y-4 backdrop-blur-md"
             >
               <h3 className="text-xs font-mono font-bold text-zinc-500 uppercase tracking-wider border-b border-hairline dark:border-zinc-800 pb-2">Workspace Limits</h3>
-              
+
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-zinc-400">Monthly Scans Used:</span>

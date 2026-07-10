@@ -52,7 +52,7 @@ export default function TermsPage() {
               <section>
                 <h2 className="text-lg font-semibold text-white">5. Limitation of Liability</h2>
                 <p className="mt-2">
-                  ATSPrime is provided "as is". We do not guarantee that our optimization recommendations will guarantee job interviews, offers, or specific score outcomes. We shall not be liable for any direct or indirect damages resulting from your use of the platform.
+                  ATSPrime is provided &quot;as is&quot;. We do not guarantee that our optimization recommendations will guarantee job interviews, offers, or specific score outcomes. We shall not be liable for any direct or indirect damages resulting from your use of the platform.
                 </p>
               </section>
             </div>

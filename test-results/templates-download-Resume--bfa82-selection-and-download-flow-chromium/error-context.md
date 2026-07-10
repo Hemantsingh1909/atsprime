@@ -12,64 +12,50 @@
 # Error details
 
 ```
-Test timeout of 300000ms exceeded.
-```
+Error: expect(locator).toBeVisible() failed
 
-```
-Error: page.fill: Test timeout of 300000ms exceeded.
+Locator: locator('text=Upload your base resume.')
+Expected: visible
+Timeout: 5000ms
+Error: element(s) not found
+
 Call log:
-  - waiting for locator('#name-input')
+  - Expect "toBeVisible" with timeout 5000ms
+  - waiting for locator('text=Upload your base resume.')
 
 ```
-
-# Page snapshot
 
 ```yaml
-- generic [active] [ref=e1]:
-  - generic [ref=e2]:
-    - banner [ref=e4]:
-      - generic [ref=e5]:
-        - link "ATSPrime" [ref=e6] [cursor=pointer]:
-          - /url: /
-          - img [ref=e7]
-          - generic [ref=e10]: ATSPrime
-        - link "Back to Home" [ref=e11] [cursor=pointer]:
-          - /url: /
-          - button "Back to Home" [ref=e12]
-    - main [ref=e13]:
-      - generic [ref=e14]:
-        - generic [ref=e15]:
-          - heading "Sign In to ATSPrime" [level=2] [ref=e16]
-          - paragraph [ref=e17]: Enter your credentials to access your dashboard workspace.
-        - generic [ref=e18]:
-          - generic [ref=e19]:
-            - generic [ref=e20]: Email Address
-            - generic [ref=e21]:
-              - img [ref=e22]
-              - textbox "Email Address" [ref=e25]:
-                - /placeholder: you@example.com
-          - generic [ref=e26]:
-            - generic [ref=e27]:
-              - generic [ref=e28]: Password
-              - button "Forgot Password?" [ref=e29]
-            - generic [ref=e30]:
-              - img [ref=e31]
-              - textbox "Password" [ref=e34]:
-                - /placeholder: ••••••••
-          - button "Sign In" [ref=e35] [cursor=pointer]
-          - generic [ref=e39]: or
-          - button "Continue with Google" [ref=e40] [cursor=pointer]:
-            - img [ref=e41]
-            - text: Continue with Google
-        - button "New to ATSPrime? Create an account" [ref=e47] [cursor=pointer]
-    - contentinfo [ref=e48]:
-      - generic [ref=e49]:
-        - paragraph [ref=e50]: © 2026 ATSPrime Sandbox. All rights reserved.
-        - link "Home" [ref=e52] [cursor=pointer]:
-          - /url: /
-  - button "Open Next.js Dev Tools" [ref=e58] [cursor=pointer]:
-    - img [ref=e59]
-  - alert [ref=e62]
+- alert
+- banner:
+  - link "ATSPrime SANDBOX":
+    - /url: /
+    - img
+    - text: ATSPrime SANDBOX
+  - text: 01. Upload
+  - img
+  - text: 02. Job Description
+  - img
+  - text: 03. Analysis
+  - img
+  - text: 04. Results
+  - button "u Test User":
+    - text: u Test User
+    - img
+- main:
+  - text: Step 01
+  - heading "Upload your base resume" [level=1]
+  - paragraph: Our AI extracts your experiences to match job requirements.
+  - img
+  - paragraph: Drag and drop your resume
+  - paragraph: PDF, DOCX, or TXT (max 5MB)
+  - paragraph:
+    - text: No resume on hand?
+    - button "Use our sample resume"
+- contentinfo:
+  - paragraph: © 2026 ATSPrime Sandbox. All rights reserved.
+  - link "Home":
+    - /url: /
 ```
 
 # Test source
@@ -86,8 +72,7 @@ Call log:
   9   |   // 2. We should see the auth modal. Sign up with a random email to ensure a fresh session.
   10  |   const randomEmail = `user_${Math.random().toString(36).substring(2, 11)}@dev.io`;
   11  |   
-> 12  |   await page.fill('#name-input', "Test User");
-      |              ^ Error: page.fill: Test timeout of 300000ms exceeded.
+  12  |   await page.fill('#name-input', "Test User");
   13  |   await page.fill('input[type="email"]', randomEmail);
   14  |   await page.fill('input[type="password"]', "Password123");
   15  |   await page.fill('#confirm-password-input', "Password123");
@@ -99,7 +84,8 @@ Call log:
   21  | 
   22  |   // Wait for the auth transition to finish and see STEP 01
   23  |   await page.waitForSelector("text=STEP 01", { timeout: 10000 });
-  24  |   await expect(page.locator("text=Upload your base resume.")).toBeVisible();
+> 24  |   await expect(page.locator("text=Upload your base resume.")).toBeVisible();
+      |                                                               ^ Error: expect(locator).toBeVisible() failed
   25  | 
   26  |   // 3. Click Use Sample Resume
   27  |   await page.click('button:has-text("Use Sample Resume")');

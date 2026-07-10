@@ -62,10 +62,11 @@ export async function POST(request: Request) {
       status: 200,
       headers
     });
-  } catch (err: any) {
-    console.error("API route PDF generation error:", err.stack || err);
+  } catch (err) {
+    const error = err as Error;
+    console.error("API route PDF generation error:", error.stack || error);
     return NextResponse.json(
-      { error: { message: err.message || "An unexpected error occurred during PDF generation." } },
+      { error: { message: error.message || "An unexpected error occurred during PDF generation." } },
       { status: 500 }
     );
   }
