@@ -23,6 +23,7 @@ interface AuthContextType {
   user: User | null;
   savedResumes: SavedResume[];
   loading: boolean;
+  resumesLoading: boolean;
   useSupabase: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ success: boolean; error?: string }>;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
@@ -44,6 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [savedResumes, setSavedResumes] = useState<SavedResume[]>([]);
   const [loading, setLoading] = useState(true);
+  const [resumesLoading, setResumesLoading] = useState(true);
   const [useSupabase] = useState(() => {
     if (typeof window !== "undefined") {
       const searchParams = new URLSearchParams(window.location.search);
@@ -156,13 +158,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // 2. Fetch resumes from DB when user is logged in
   useEffect(() => {
+    let cancelled = false;
+
     if (!user) {
-      setTimeout(() => {
-        setSavedResumes([]);
-      }, 0);
+      // Use synchronous state reset (no setTimeout) to avoid racing with 
+      // the user resumes fetch effect that runs when user is set shortly after
+      setSavedResumes([]);
+      setResumesLoading(false);
       return;
     }
 
+    setResumesLoading(true);
     if (useSupabase) {
       const fetchResumes = async () => {
         try {
@@ -171,8 +177,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .select("*")
             .order("created_at", { ascending: false });
 
+          if (cancelled) return;
+
           if (error) {
             console.warn("Error fetching resumes from Supabase:", error.message);
+            setResumesLoading(false);
             return;
           }
 
@@ -200,21 +209,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch (err) {
           const error = err as Error;
           console.warn("Network error fetching resumes from Supabase:", error.message || error);
+        } finally {
+          if (!cancelled) setResumesLoading(false);
         }
       };
 
       fetchResumes();
     } else {
-      // Fallback: Fetch resumes from localStorage
-      setTimeout(() => {
+      // Fallback: Fetch resumes from localStorage (still deferred to avoid blocking paint)
+      const timer = setTimeout(() => {
+        if (cancelled) return;
         const userResumes = localStorage.getItem(`atsprime_resumes_${user.email}`);
         if (userResumes) {
           setSavedResumes(JSON.parse(userResumes) as SavedResume[]);
         } else {
           setSavedResumes([]);
         }
+        setResumesLoading(false);
       }, 0);
+      return () => {
+        cancelled = true;
+        clearTimeout(timer);
+      };
     }
+
+    return () => {
+      cancelled = true;
+    };
   }, [user, useSupabase]);
 
   // Dynamic Signup
@@ -795,6 +816,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         savedResumes,
         loading,
+        resumesLoading,
         useSupabase,
         signUp,
         signIn,

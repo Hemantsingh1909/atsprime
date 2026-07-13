@@ -24,7 +24,7 @@ function LoginContent() {
   } = useAuth();
 
   const mockAuth = searchParams.get("mock_auth");
-  let redirectUrl = searchParams.get("redirect") || "/";
+  let redirectUrl = searchParams.get("redirect") || "/dashboard";
   if (mockAuth && !redirectUrl.includes("mock_auth")) {
     redirectUrl += (redirectUrl.includes("?") ? "&" : "?") + `mock_auth=${mockAuth}`;
   }
@@ -59,9 +59,28 @@ function LoginContent() {
   const [errorMessage, setErrorMessage] = useState("");
   const [loadingText, setLoadingText] = useState("");
 
+  // Helper to clear dashboard session storage on successful login
+  const clearDashboardSession = () => {
+    try {
+      if (typeof window !== "undefined") {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const key = sessionStorage.key(i);
+          if (key && key.startsWith("atsprime_dashboard_")) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach((k) => sessionStorage.removeItem(k));
+      }
+    } catch (e) {
+      console.warn("Failed to clear dashboard session:", e);
+    }
+  };
+
   // Redirect if already logged in
   useEffect(() => {
     if (!authLoading && user) {
+      clearDashboardSession();
       router.push(redirectUrl);
     }
   }, [user, authLoading, router, redirectUrl]);
@@ -114,6 +133,7 @@ function LoginContent() {
         if (res.success) {
           setStatusMessage("Email verified successfully! Redirecting...");
           setLoadingText("Redirecting...");
+          clearDashboardSession();
           router.push(redirectUrl);
         } else {
           setErrorMessage(formatError(res.error));
@@ -123,6 +143,7 @@ function LoginContent() {
         const res = await signIn(email, password);
         if (res.success) {
           setLoadingText("Redirecting...");
+          clearDashboardSession();
           router.push(redirectUrl);
         } else {
           if (res.error && (res.error.toLowerCase().includes("email not confirmed") || res.error.toLowerCase().includes("confirmation required"))) {
@@ -183,6 +204,7 @@ function LoginContent() {
       if (res.success) {
         setLoadingText("Redirecting...");
         // OAuth redirects immediately in production, but triggers local session set in mock mode
+        clearDashboardSession();
         router.push(redirectUrl);
       } else {
         setErrorMessage(formatError(res.error));

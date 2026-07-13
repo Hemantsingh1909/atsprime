@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { templates, generateTemplateHtml } from "@/app/utils/templates";
+import ResultsPage from "@/app/components/results/ResultsPage";
 import posthog from "posthog-js";
 
 // Types for resume optimization
@@ -136,6 +137,7 @@ function DashboardContent() {
     saveResume,
     deleteResume,
     loading,
+    resumesLoading,
     useSupabase,
   } = useAuth();
 
@@ -170,6 +172,7 @@ function DashboardContent() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [hasSavedThisRun, setHasSavedThisRun] = useState(false);
+  const [hasAttemptedAutoLoad, setHasAttemptedAutoLoad] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -212,6 +215,38 @@ function DashboardContent() {
       console.error("Failed to restore session state:", e);
     }
   }, []);
+
+  // Helper to load a saved resume state
+  const loadSavedResume = (res: any) => {
+    setResumeText(res.originalText);
+    setJobDescription(res.jobTitle);
+    if (res.optimizedDataString) {
+      try {
+        setOptimizedData(JSON.parse(res.optimizedDataString));
+      } catch (e) {
+        console.error("Error parsing saved optimized data:", e);
+        setOptimizedData(null);
+      }
+    } else {
+      setOptimizedData(null);
+    }
+    setStep(4);
+    setHasSavedThisRun(true);
+    setDownloadSuccess(false);
+  };
+
+  // Auto-load latest saved resume on initial dashboard mount if user has already completed resume optimization
+  useEffect(() => {
+    if (loading || resumesLoading || hasAttemptedAutoLoad) return;
+    const savedStep = sessionStorage.getItem("atsprime_dashboard_step");
+    const parsedStep = savedStep ? parseInt(savedStep, 10) : 1;
+    if (user && savedResumes.length > 0 && parsedStep === 1 && !optimizedData) {
+      setHasAttemptedAutoLoad(true);
+      loadSavedResume(savedResumes[0]);
+    } else {
+      setHasAttemptedAutoLoad(true);
+    }
+  }, [user, savedResumes, loading, resumesLoading, optimizedData, hasAttemptedAutoLoad]);
 
   // Trigger pending download after user logging in
   useEffect(() => {
@@ -750,7 +785,10 @@ function DashboardContent() {
     setHasSavedThisRun(false);
   };
 
-  if (loading) {
+  const hasStepState = typeof window !== "undefined" && sessionStorage.getItem("atsprime_dashboard_step") !== null;
+  const isInitiallyLoadingResumes = user && resumesLoading && step === 1 && !optimizedData && !hasStepState;
+
+  if (loading || isInitiallyLoadingResumes) {
     return (
       <div className="min-h-screen bg-canvas-soft flex items-center justify-center text-ink">
         <div className="animate-spin rounded-full h-8 w-8 border-2 border-violet border-t-transparent" />
@@ -761,7 +799,7 @@ function DashboardContent() {
 
 
   return (
-    <div className="min-h-screen bg-canvas-soft text-ink flex flex-col font-sans select-none relative">
+    <div className="h-screen bg-canvas-soft text-ink flex flex-col font-sans select-none relative overflow-hidden">
       {/* Mesh background glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 -z-10 w-full max-w-7xl h-[400px] bg-gradient-to-b from-violet/5 via-highlight-pink/0 to-transparent blur-[120px]" />
       
@@ -887,6 +925,23 @@ function DashboardContent() {
       </header>
 
       {/* Main Container */}
+      {step === 4 ? (
+        // Step 4 gets a full-height, full-width layout (no max-width constraint)
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <ResultsPage
+            optimizedData={optimizedData!}
+            user={user}
+            onBack={() => setStep(2)}
+            onStartOver={resetFlow}
+            onSignOut={() => { signOut(); resetFlow(); }}
+            onDownload={handleDownload}
+            downloadingPdf={downloadingPdf}
+            apiError={apiError}
+            onClearError={() => setApiError(null)}
+            hasSaved={hasSavedThisRun}
+          />
+        </div>
+      ) : (
       <main className="flex-1 max-w-5xl w-full mx-auto px-6 py-12 flex flex-col justify-center">
         <AnimatePresence mode="wait">
           
@@ -1031,23 +1086,7 @@ function DashboardContent() {
 
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <button
-                            onClick={() => {
-                              setResumeText(res.originalText);
-                              setJobDescription(res.jobTitle);
-                              if (res.optimizedDataString) {
-                                try {
-                                  setOptimizedData(JSON.parse(res.optimizedDataString));
-                                } catch (e) {
-                                  console.error("Error parsing saved optimized data:", e);
-                                  setOptimizedData(null);
-                                }
-                              } else {
-                                setOptimizedData(null);
-                              }
-                              setStep(4);
-                              setHasSavedThisRun(true);
-                              setDownloadSuccess(false);
-                            }}
+                            onClick={() => loadSavedResume(res)}
                             className="px-3 py-1 text-[11px] font-medium bg-zinc-950 border border-hairline hover:bg-zinc-900 rounded-sm transition-colors cursor-pointer text-zinc-300"
                           >
                             View
@@ -1216,8 +1255,8 @@ function DashboardContent() {
             </motion.div>
           )}
 
-          {/* STEP 4: OPTIMIZATION RESULTS */}
-          {step === 4 && (
+          {/* STEP 4 is rendered outside this <main> via ResultsPage component */}
+          {false && (
             <motion.div
               key="step-4"
               initial={{ opacity: 0, y: 15 }}
@@ -1258,11 +1297,23 @@ function DashboardContent() {
                   </button>
 
                   <button
-                    onClick={() => setActiveResultTab("preview")}
-                    className="group px-4.5 py-2 text-xs font-medium bg-white hover:opacity-90 text-black rounded-full transition-all cursor-pointer flex items-center gap-1.5"
+                    onClick={async () => {
+                      await handleDownload("pdf");
+                    }}
+                    disabled={downloadingPdf}
+                    className="group px-4.5 py-2 text-xs font-semibold bg-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-black rounded-full transition-all cursor-pointer flex items-center gap-1.5"
                   >
-                    Download PDF
-                    <Download size={13} />
+                    {downloadingPdf ? (
+                      <>
+                        <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-black border-t-transparent" />
+                        <span>Generating PDF...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Download PDF</span>
+                        <Download size={13} />
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -1619,7 +1670,7 @@ function DashboardContent() {
                             <div className="flex-1 w-full h-full bg-white rounded overflow-hidden shadow-inner relative">
                               {optimizedData ? (
                                 <iframe
-                                  srcDoc={generateTemplateHtml(optimizedData.tailoredResumeText, selectedTemplate)}
+                                  srcDoc={generateTemplateHtml(optimizedData?.tailoredResumeText ?? "", selectedTemplate)}
                                   className="w-full h-full border-0 bg-white"
                                   title="Resume Visual Preview"
                                   id="resume-preview-iframe"
@@ -1641,12 +1692,11 @@ function DashboardContent() {
             </motion.div>
           )}
         </AnimatePresence>
-
-
-
       </main>
+      )} {/* end step !== 4 */}
 
-      {/* Footer */}
+      {/* Footer — only show on non-results steps */}
+      {step !== 4 && (
       <footer className="border-t border-hairline bg-canvas py-8 px-6 mt-12 text-center text-xs text-zinc-600 dark:text-zinc-500">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <p>© 2026 {useSupabase ? "ATSPrime" : "ATSPrime Sandbox"}. All rights reserved.</p>
@@ -1655,6 +1705,7 @@ function DashboardContent() {
           </div>
         </div>
       </footer>
+      )}
     </div>
   );
 }

@@ -86,16 +86,37 @@ export const parseResumeText = (text: string) => {
     }
   }
 
-  if (!name) name = "Alex Rivera";
-  if (!contact) contact = "alex.rivera@dev.io | +1 (555) 019-2834 | San Francisco, CA";
+  const isSample = text.toLowerCase().includes("alex.rivera@dev.io");
+
+  if (isSample) {
+    if (!name) name = "Alex Rivera";
+    if (!contact) contact = "alex.rivera@dev.io | +1 (555) 019-2834 | San Francisco, CA";
+    return {
+      name,
+      contact,
+      summary: summary || "Results-oriented professional with a proven track record of success.",
+      experience: experience.length > 0 ? experience : ["Software Developer | TechCorp (2024 - Present) \n- Developed and styled UI components."],
+      education: education.length > 0 ? education : ["B.S. in Computer Science | University of California"],
+      skills: skills.length > 0 ? skills : ["React, Next.js, TypeScript, JavaScript, CSS, HTML"],
+      projects: projects
+    };
+  }
+
+  if (!name) {
+    name = lines.find(l => l.trim() !== "") || "";
+  }
+  if (!contact) {
+    const nonEmpties = lines.filter(l => l.trim() !== "");
+    contact = nonEmpties[1] || "";
+  }
 
   return {
     name,
     contact,
-    summary: summary || "Results-oriented professional with a proven track record of success.",
-    experience: experience.length > 0 ? experience : ["Software Developer | TechCorp (2024 - Present) \n- Developed and styled UI components."],
-    education: education.length > 0 ? education : ["B.S. in Computer Science | University of California"],
-    skills: skills.length > 0 ? skills : ["React, Next.js, TypeScript, JavaScript, CSS, HTML"],
+    summary: summary || "",
+    experience: experience.length > 0 ? experience : [],
+    education: education.length > 0 ? education : [],
+    skills: skills.length > 0 ? skills : [],
     projects: projects
   };
 };
@@ -151,20 +172,18 @@ export const generateTemplateHtml = (text: string, template: string) => {
     contentHtml = `
       <h1>${data.name}</h1>
       <div class="contact">${data.contact}</div>
-      <h2>Professional Summary</h2>
-      <div class="section-content"><p>${data.summary}</p></div>
-      <h2>Work Experience</h2>
-      <div class="section-content">${renderExperienceHtml(data.experience)}</div>
-      ${data.projects.length > 0 ? `
-      <h2>Projects</h2>
-      <div class="section-content">${renderExperienceHtml(data.projects)}</div>
-      ` : ""}
-      <h2>Education</h2>
-      <div class="section-content">${renderExperienceHtml(data.education)}</div>
-      <h2>Skills</h2>
+      ${data.summary ? `<h2>Professional Summary</h2>
+      <div class="section-content"><p>${data.summary}</p></div>` : ""}
+      ${data.experience.length > 0 ? `<h2>Work Experience</h2>
+      <div class="section-content">${renderExperienceHtml(data.experience)}</div>` : ""}
+      ${data.projects.length > 0 ? `<h2>Projects</h2>
+      <div class="section-content">${renderExperienceHtml(data.projects)}</div>` : ""}
+      ${data.education.length > 0 ? `<h2>Education</h2>
+      <div class="section-content">${renderExperienceHtml(data.education)}</div>` : ""}
+      ${data.skills.length > 0 ? `<h2>Skills</h2>
       <div class="section-content" style="margin-top: 8px;">
         ${data.skills.map(s => `<p>${s}</p>`).join("")}
-      </div>
+      </div>` : ""}
     `;
   } else if (template === "modern") {
     styles = `
@@ -177,20 +196,18 @@ export const generateTemplateHtml = (text: string, template: string) => {
     contentHtml = `
       <h1>${data.name}</h1>
       <div class="contact">${data.contact}</div>
-      <h2>Summary</h2>
-      <div class="section-content"><p>${data.summary}</p></div>
-      <h2>Experience</h2>
-      <div class="section-content">${renderExperienceHtml(data.experience)}</div>
-      ${data.projects.length > 0 ? `
-      <h2>Projects</h2>
-      <div class="section-content">${renderExperienceHtml(data.projects)}</div>
-      ` : ""}
-      <h2>Education</h2>
-      <div class="section-content">${renderExperienceHtml(data.education)}</div>
-      <h2>Skills & Technologies</h2>
+      ${data.summary ? `<h2>Summary</h2>
+      <div class="section-content"><p>${data.summary}</p></div>` : ""}
+      ${data.experience.length > 0 ? `<h2>Experience</h2>
+      <div class="section-content">${renderExperienceHtml(data.experience)}</div>` : ""}
+      ${data.projects.length > 0 ? `<h2>Projects</h2>
+      <div class="section-content">${renderExperienceHtml(data.projects)}</div>` : ""}
+      ${data.education.length > 0 ? `<h2>Education</h2>
+      <div class="section-content">${renderExperienceHtml(data.education)}</div>` : ""}
+      ${data.skills.length > 0 ? `<h2>Skills & Technologies</h2>
       <div class="section-content" style="margin-top: 8px;">
         ${data.skills.map(s => `<p>${s}</p>`).join("")}
-      </div>
+      </div>` : ""}
     `;
   } else if (template === "minimal") {
     styles = `
@@ -203,20 +220,18 @@ export const generateTemplateHtml = (text: string, template: string) => {
     contentHtml = `
       <h1>${data.name}</h1>
       <div class="contact">${data.contact}</div>
-      <h2>About Me</h2>
-      <div class="section-content"><p>${data.summary}</p></div>
-      <h2>Experience</h2>
-      <div class="section-content">${renderExperienceHtml(data.experience)}</div>
-      ${data.projects.length > 0 ? `
-      <h2>Projects</h2>
-      <div class="section-content">${renderExperienceHtml(data.projects)}</div>
-      ` : ""}
-      <h2>Education</h2>
-      <div class="section-content">${renderExperienceHtml(data.education)}</div>
-      <h2>Expertise</h2>
+      ${data.summary ? `<h2>About Me</h2>
+      <div class="section-content"><p>${data.summary}</p></div>` : ""}
+      ${data.experience.length > 0 ? `<h2>Experience</h2>
+      <div class="section-content">${renderExperienceHtml(data.experience)}</div>` : ""}
+      ${data.projects.length > 0 ? `<h2>Projects</h2>
+      <div class="section-content">${renderExperienceHtml(data.projects)}</div>` : ""}
+      ${data.education.length > 0 ? `<h2>Education</h2>
+      <div class="section-content">${renderExperienceHtml(data.education)}</div>` : ""}
+      ${data.skills.length > 0 ? `<h2>Expertise</h2>
       <div class="section-content" style="margin-top: 8px;">
         ${data.skills.map(s => `<p>${s}</p>`).join("")}
-      </div>
+      </div>` : ""}
     `;
   } else if (template === "split") {
     styles = `
@@ -234,26 +249,24 @@ export const generateTemplateHtml = (text: string, template: string) => {
       <div class="container">
         <div class="sidebar">
           <h1>${data.name}</h1>
-          <h2>Contact</h2>
+          ${data.contact ? `<h2>Contact</h2>
           <div class="sidebar-content" style="margin-top: 8px; line-height: 1.8;">
             ${data.contact.split("|").map(c => `<div>${c.trim()}</div>`).join("")}
-          </div>
-          <h2>Skills</h2>
+          </div>` : ""}
+          ${data.skills.length > 0 ? `<h2>Skills</h2>
           <div class="sidebar-content" style="margin-top: 8px; line-height: 1.8;">
             ${data.skills.map(s => `<div>${s}</div>`).join("")}
-          </div>
+          </div>` : ""}
         </div>
         <div class="main">
-          <h2>Profile</h2>
-          <div class="section-content"><p>${data.summary}</p></div>
-          <h2>Experience</h2>
-          <div class="section-content">${renderExperienceHtml(data.experience)}</div>
-          ${data.projects.length > 0 ? `
-          <h2>Projects</h2>
-          <div class="section-content">${renderExperienceHtml(data.projects)}</div>
-          ` : ""}
-          <h2>Education</h2>
-          <div class="section-content">${renderExperienceHtml(data.education)}</div>
+          ${data.summary ? `<h2>Profile</h2>
+          <div class="section-content"><p>${data.summary}</p></div>` : ""}
+          ${data.experience.length > 0 ? `<h2>Experience</h2>
+          <div class="section-content">${renderExperienceHtml(data.experience)}</div>` : ""}
+          ${data.projects.length > 0 ? `<h2>Projects</h2>
+          <div class="section-content">${renderExperienceHtml(data.projects)}</div>` : ""}
+          ${data.education.length > 0 ? `<h2>Education</h2>
+          <div class="section-content">${renderExperienceHtml(data.education)}</div>` : ""}
         </div>
       </div>
     `;
@@ -268,20 +281,18 @@ export const generateTemplateHtml = (text: string, template: string) => {
     contentHtml = `
       <h1>${data.name}</h1>
       <div class="contact">${data.contact}</div>
-      <div><h2>Summary</h2></div>
-      <div class="section-content"><p>${data.summary}</p></div>
-      <div><h2>Experience</h2></div>
-      <div class="section-content">${renderExperienceHtml(data.experience)}</div>
-      ${data.projects.length > 0 ? `
-      <div><h2>Projects</h2></div>
-      <div class="section-content">${renderExperienceHtml(data.projects)}</div>
-      ` : ""}
-      <div><h2>Education</h2></div>
-      <div class="section-content">${renderExperienceHtml(data.education)}</div>
-      <div><h2>Skills</h2></div>
+      ${data.summary ? `<div><h2>Summary</h2></div>
+      <div class="section-content"><p>${data.summary}</p></div>` : ""}
+      ${data.experience.length > 0 ? `<div><h2>Experience</h2></div>
+      <div class="section-content">${renderExperienceHtml(data.experience)}</div>` : ""}
+      ${data.projects.length > 0 ? `<div><h2>Projects</h2></div>
+      <div class="section-content">${renderExperienceHtml(data.projects)}</div>` : ""}
+      ${data.education.length > 0 ? `<div><h2>Education</h2></div>
+      <div class="section-content">${renderExperienceHtml(data.education)}</div>` : ""}
+      ${data.skills.length > 0 ? `<div><h2>Skills</h2></div>
       <div class="section-content" style="margin-top: 8px;">
         ${data.skills.map(s => `<p>${s}</p>`).join("")}
-      </div>
+      </div>` : ""}
     `;
   } else {
     styles = `
@@ -294,20 +305,18 @@ export const generateTemplateHtml = (text: string, template: string) => {
     contentHtml = `
       <h1>${data.name}</h1>
       <div class="contact">${data.contact}</div>
-      <h2>Executive Profile</h2>
-      <div class="section-content"><p>${data.summary}</p></div>
-      <h2>Professional Experience</h2>
-      <div class="section-content">${renderExperienceHtml(data.experience)}</div>
-      ${data.projects.length > 0 ? `
-      <h2>Selected Key Projects</h2>
-      <div class="section-content">${renderExperienceHtml(data.projects)}</div>
-      ` : ""}
-      <h2>Education & Credentials</h2>
-      <div class="section-content">${renderExperienceHtml(data.education)}</div>
-      <h2>Core Competencies</h2>
+      ${data.summary ? `<h2>Executive Profile</h2>
+      <div class="section-content"><p>${data.summary}</p></div>` : ""}
+      ${data.experience.length > 0 ? `<h2>Professional Experience</h2>
+      <div class="section-content">${renderExperienceHtml(data.experience)}</div>` : ""}
+      ${data.projects.length > 0 ? `<h2>Selected Key Projects</h2>
+      <div class="section-content">${renderExperienceHtml(data.projects)}</div>` : ""}
+      ${data.education.length > 0 ? `<h2>Education & Credentials</h2>
+      <div class="section-content">${renderExperienceHtml(data.education)}</div>` : ""}
+      ${data.skills.length > 0 ? `<h2>Core Competencies</h2>
       <div class="section-content" style="margin-top: 8px;">
         ${data.skills.map(s => `<p>${s}</p>`).join("")}
-      </div>
+      </div>` : ""}
     `;
   }
 

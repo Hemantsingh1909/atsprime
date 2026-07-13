@@ -21,10 +21,10 @@ test("Resume template selection and download flow", async ({ page }) => {
 
   // Wait for the auth transition to finish and see STEP 01
   await page.waitForSelector("text=STEP 01", { timeout: 10000 });
-  await expect(page.locator("text=Upload your base resume.")).toBeVisible();
+  await expect(page.locator("text=Upload your base resume")).toBeVisible();
 
   // 3. Click Use Sample Resume
-  await page.click('button:has-text("Use Sample Resume")');
+  await page.click('button:has-text("Use our sample resume")');
   
   // Verify sample file loaded
   await expect(page.locator("text=Alex_Rivera_Frontend_Engineer.pdf")).toBeVisible();
@@ -34,7 +34,7 @@ test("Resume template selection and download flow", async ({ page }) => {
 
   // Verify we are at STEP 02
   await page.waitForSelector("text=STEP 02", { timeout: 5000 });
-  await expect(page.locator("text=Paste the Target Job.")).toBeVisible();
+  await expect(page.locator("text=Paste the Target Job")).toBeVisible();
 
   // 5. Load Sample Job
   await page.click('button:has-text("Load Sample Job")');
@@ -44,7 +44,7 @@ test("Resume template selection and download flow", async ({ page }) => {
   expect(jobText).toContain("Senior Frontend Engineer");
 
   // 6. Click Optimize & Tailor Resume
-  await page.click('button:has-text("Optimize & Tailor Resume")');
+  await page.click('button:has-text("Optimize Resume")');
 
   // Verify STEP 03 analysis starts
   await page.waitForSelector("text=TAILORING ENGINE", { timeout: 5000 });
@@ -52,13 +52,13 @@ test("Resume template selection and download flow", async ({ page }) => {
   // 7. Wait for step 4 Results (timeout 60 seconds to allow mock progress + API call to finish)
   // Note: the mock uses process.env.GEMINI_API_KEY, but since the test runs against the local server, 
   // we wait for it to return candidates or fallback.
-  await page.waitForSelector("text=Tailored Resume Ready.", { timeout: 240000 });
+  await page.waitForSelector("text=Tailored Resume Ready", { timeout: 240000 });
   
   // Verify ATS Score is displayed
-  await expect(page.locator("text=ATS Match Score Comparison")).toBeVisible();
+  await expect(page.locator("text=ATS Score Compatibility")).toBeVisible();
 
   // 8. Open inline Template Selection Tab by clicking the header button
-  await page.click('button:has-text("Download PDF / Preview")');
+  await page.click('button:has-text("Template & PDF")');
 
   // Verify the visual layout preview container is visible
   await page.waitForSelector("text=Visual Layout Preview", { timeout: 5000 });
@@ -87,7 +87,7 @@ test("Resume template selection and download flow", async ({ page }) => {
   // 12. Trigger PDF download and capture it (button text is "Download PDF" inside the tab view)
   const [downloadPdf] = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Download PDF", exact: true }).click()
+    page.getByRole("button", { name: "Download PDF", exact: true }).first().click()
   ]);
 
   const pdfFilename = downloadPdf.suggestedFilename();

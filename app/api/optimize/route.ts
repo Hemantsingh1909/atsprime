@@ -40,21 +40,46 @@ export async function POST(request: Request) {
       console.log("[GEMINI STATUS]: BYPASSED (Sample resume / E2E test detected. Bypassing live API calls to prevent rate limits.)");
       const fallbackData = {
         originalResumeText: activeResumeText,
-        tailoredResumeText: activeResumeText + "\n\n[AI Optimization complete: tailored to align with requirements]",
-        originalAtsScore: 65,
-        optimizedAtsScore: 94,
-        matchedKeywords: ["React", "JavaScript", "HTML", "CSS", "TypeScript"],
-        insertedKeywords: ["Next.js", "Tailwind CSS", "Core Web Vitals", "LCP", "Accessibility"],
+        tailoredResumeText: `Alex Rivera
+alex.rivera@dev.io | +1 (555) 019-2834 | San Francisco, CA
+
+PROFESSIONAL SUMMARY
+Frontend developer with experience building web applications using React and JavaScript. Passionate about writing clean code and improving layouts.
+
+WORK EXPERIENCE
+Frontend Developer | TechCorp (2024 - Present)
+- Designed and engineered 25+ reusable React & TypeScript components using Tailwind CSS, boosting codebase modularity and reducing rendering times.
+- Spearheaded Core Web Vitals audits and bundle-splitting optimizations, reducing Largest Contentful Paint (LCP) by 1.2s and improving SEO indexing scores.
+- Partnered with backend engineers to architect RESTful/GraphQL API contracts, ensuring seamless, type-safe data integration across 12+ dashboard views.
+- Conducted accessibility (a11y) audits and resolved critical responsive layout bugs, ensuring compliance with WCAG AAA standards across all viewports.
+
+Software Engineer Intern | CodeLabs (2023)
+- Wrote JavaScript and HTML/CSS code for marketing pages.
+- Worked on user feedback issues and resolved styling bugs.`,
+        originalAtsScore: 71,
+        optimizedAtsScore: 93,
+        matchedKeywords: ["React", "JavaScript", "HTML", "CSS", "TypeScript", "Tailwind CSS", "API contracts", "RESTful", "GraphQL", "Web performance", "Core Web Vitals", "LCP", "SEO", "Accessibility", "a11y"],
+        insertedKeywords: ["Next.js", "Tailwind CSS", "Core Web Vitals", "LCP", "Accessibility", "a11y"],
         bulletDiffs: [
           {
             original: "Responsible for building React components and styling with CSS.",
-            tailored: "Engineered scalable, reusable React components and styled layouts with Tailwind CSS, enhancing responsive behavior and accessibility (a11y).",
-            improvements: ["Quantified achievements", "Aligned keyword coverage for Tailwind CSS and a11y"]
+            tailored: "Designed and engineered 25+ reusable React & TypeScript components using Tailwind CSS, boosting codebase modularity and reducing rendering times.",
+            improvements: ["Added TypeScript type safety", "Highlighted Tailwind CSS usage", "Quantified component impact (25+)"]
           },
           {
             original: "Worked on page speed performance and improved loading times.",
-            tailored: "Spearheaded front-end speed optimization projects, boosting LCP performance by 25% and reducing initial page load times.",
-            improvements: ["Added specific performance metrics (LCP)", "Enhanced action verbs"]
+            tailored: "Spearheaded Core Web Vitals audits and bundle-splitting optimizations, reducing Largest Contentful Paint (LCP) by 1.2s and improving SEO indexing scores.",
+            improvements: ["Mentioned Core Web Vitals & LCP", "Linked to business metric (SEO)", "Specified metric improvement (1.2s)"]
+          },
+          {
+            original: "Collaborated with backend devs to integrate APIs.",
+            tailored: "Partnered with backend engineers to architect RESTful/GraphQL API contracts, ensuring seamless, type-safe data integration across 12+ dashboard views.",
+            improvements: ["Defined API types (RESTful/GraphQL)", "Used active verb (architected)", "Specified scope (12+ views)"]
+          },
+          {
+            original: "Fixed layout alignment problems.",
+            tailored: "Conducted accessibility (a11y) audits and resolved critical responsive layout bugs, ensuring compliance with WCAG AAA standards across all viewports.",
+            improvements: ["Added accessibility keywords", "Aligned with industry standards (WCAG AAA)", "Emphasized responsiveness"]
           }
         ]
       };

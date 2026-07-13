@@ -6,15 +6,15 @@
 
 # Test info
 
-- Name: templates-download.spec.ts >> Resume template selection and download flow
-- Location: tests/templates-download.spec.ts:3:5
+- Name: auto-load-results.spec.ts >> Auto-load saved resume redirect to Step 4 and template download content verification
+- Location: tests/auto-load-results.spec.ts:3:5
 
 # Error details
 
 ```
-TimeoutError: page.waitForSelector: Timeout 5000ms exceeded.
+TimeoutError: page.waitForSelector: Timeout 240000ms exceeded.
 Call log:
-  - waiting for locator('text=TAILORING ENGINE') to be visible
+  - waiting for locator('text=Tailored Resume Ready') to be visible
 
 ```
 
@@ -42,9 +42,9 @@ Call log:
           - generic [ref=e29]: 03. Analysis
           - img [ref=e30]
           - generic [ref=e32]: 04. Results
-        - button "u Test User" [ref=e35] [cursor=pointer]:
+        - button "u Test Redirect User" [ref=e35] [cursor=pointer]:
           - generic [ref=e36]: u
-          - generic [ref=e37]: Test User
+          - generic [ref=e37]: Test Redirect User
           - img [ref=e38]
     - generic [ref=e41]:
       - complementary [ref=e42]:
@@ -293,105 +293,84 @@ Call log:
 # Test source
 
 ```ts
-  1   | import { test, expect } from "@playwright/test";
-  2   | 
-  3   | test("Resume template selection and download flow", async ({ page }) => {
-  4   |   test.setTimeout(300000);
-  5   |   // 1. Navigate to dashboard page via login redirect
-  6   |   await page.goto("http://localhost:3000/login?mock_auth=true&redirect=/dashboard");
-  7   |   await page.waitForLoadState("load");
-  8   | 
-  9   |   // 2. We should see the auth modal. Sign up with a random email to ensure a fresh session.
-  10  |   const randomEmail = `user_${Math.random().toString(36).substring(2, 11)}@dev.io`;
-  11  |   
-  12  |   await page.fill('#name-input', "Test User");
-  13  |   await page.fill('input[type="email"]', randomEmail);
-  14  |   await page.fill('input[type="password"]', "Password123");
-  15  |   await page.fill('#confirm-password-input', "Password123");
-  16  |   await page.click('button[type="submit"]');
-  17  | 
-  18  |   // Wait for the redirect directly to the dashboard
-  19  |   await page.waitForURL((url) => url.pathname === "/dashboard");
-  20  |   await page.waitForLoadState("load");
-  21  | 
-  22  |   // Wait for the auth transition to finish and see STEP 01
-  23  |   await page.waitForSelector("text=STEP 01", { timeout: 10000 });
-  24  |   await expect(page.locator("text=Upload your base resume")).toBeVisible();
-  25  | 
-  26  |   // 3. Click Use Sample Resume
-  27  |   await page.click('button:has-text("Use our sample resume")');
-  28  |   
-  29  |   // Verify sample file loaded
-  30  |   await expect(page.locator("text=Alex_Rivera_Frontend_Engineer.pdf")).toBeVisible();
-  31  | 
-  32  |   // 4. Click Continue to Job Description
-  33  |   await page.click('button:has-text("Continue to Job Description")');
-  34  | 
-  35  |   // Verify we are at STEP 02
-  36  |   await page.waitForSelector("text=STEP 02", { timeout: 5000 });
-  37  |   await expect(page.locator("text=Paste the Target Job")).toBeVisible();
-  38  | 
-  39  |   // 5. Load Sample Job
-  40  |   await page.click('button:has-text("Load Sample Job")');
-  41  | 
-  42  |   // Verify text area is populated
-  43  |   const jobText = await page.locator("textarea").inputValue();
-  44  |   expect(jobText).toContain("Senior Frontend Engineer");
-  45  | 
-  46  |   // 6. Click Optimize & Tailor Resume
-  47  |   await page.click('button:has-text("Optimize Resume")');
-  48  | 
-  49  |   // Verify STEP 03 analysis starts
-> 50  |   await page.waitForSelector("text=TAILORING ENGINE", { timeout: 5000 });
-      |              ^ TimeoutError: page.waitForSelector: Timeout 5000ms exceeded.
-  51  |   
-  52  |   // 7. Wait for step 4 Results (timeout 60 seconds to allow mock progress + API call to finish)
-  53  |   // Note: the mock uses process.env.GEMINI_API_KEY, but since the test runs against the local server, 
-  54  |   // we wait for it to return candidates or fallback.
-  55  |   await page.waitForSelector("text=Tailored Resume Ready", { timeout: 240000 });
-  56  |   
-  57  |   // Verify ATS Score is displayed
-  58  |   await expect(page.locator("text=ATS Score Compatibility")).toBeVisible();
-  59  | 
-  60  |   // 8. Open inline Template Selection Tab by clicking the header button
-  61  |   await page.click('button:has-text("Template & PDF")');
-  62  | 
-  63  |   // Verify the visual layout preview container is visible
-  64  |   await page.waitForSelector("text=Visual Layout Preview", { timeout: 5000 });
-  65  |   await expect(page.locator("text=Visual Layout Preview")).toBeVisible();
-  66  | 
-  67  |   // 9. Verify the preview iframe is visible
-  68  |   const previewIframe = page.locator("#resume-preview-iframe");
-  69  |   await expect(previewIframe).toBeVisible();
-  70  | 
-  71  |   // 10. Verify all 6 templates are rendered in the sidebar list
-  72  |   const templates = [
-  73  |     "Classic Harvard",
-  74  |     "Modern Tech",
-  75  |     "Elegant Minimalist",
-  76  |     "Split Sidebar",
-  77  |     "Creative Slate",
-  78  |     "Executive Bold"
-  79  |   ];
-  80  |   for (const tpl of templates) {
-  81  |     await expect(page.locator(`text=${tpl}`)).toBeVisible();
-  82  |   }
-  83  | 
-  84  |   // 11. Select 'Modern Tech' template
-  85  |   await page.click('text=Modern Tech');
-  86  |   
-  87  |   // 12. Trigger PDF download and capture it (button text is "Download PDF" inside the tab view)
-  88  |   const [downloadPdf] = await Promise.all([
-  89  |     page.waitForEvent("download"),
-  90  |     page.getByRole("button", { name: "Download PDF", exact: true }).first().click()
-  91  |   ]);
-  92  | 
-  93  |   const pdfFilename = downloadPdf.suggestedFilename();
-  94  |   expect(pdfFilename).toContain("Modern");
-  95  |   expect(pdfFilename.endsWith(".pdf")).toBe(true);
-  96  | 
-  97  |   // 13. Verify the inline view remains visible upon successful download
-  98  |   await expect(page.locator("text=Visual Layout Preview")).toBeVisible();
-  99  | });
-  100 | 
+  1  | import { test, expect } from "@playwright/test";
+  2  | 
+  3  | test("Auto-load saved resume redirect to Step 4 and template download content verification", async ({ page }) => {
+  4  |   test.setTimeout(300000);
+  5  | 
+  6  |   // 1. Navigate to dashboard page via login redirect to register a new user
+  7  |   await page.goto("http://localhost:3000/login?mock_auth=true&redirect=/dashboard");
+  8  |   await page.waitForLoadState("load");
+  9  | 
+  10 |   const randomEmail = `user_${Math.random().toString(36).substring(2, 11)}@dev.io`;
+  11 |   
+  12 |   await page.fill('#name-input', "Test Redirect User");
+  13 |   await page.fill('input[type="email"]', randomEmail);
+  14 |   await page.fill('input[type="password"]', "Password123");
+  15 |   await page.fill('#confirm-password-input', "Password123");
+  16 |   await page.click('button[type="submit"]');
+  17 | 
+  18 |   // Wait for redirect to dashboard
+  19 |   await page.waitForURL((url) => url.pathname === "/dashboard");
+  20 |   await page.waitForLoadState("load");
+  21 | 
+  22 |   // Wait for Step 1
+  23 |   await page.waitForSelector("text=STEP 01", { timeout: 10000 });
+  24 |   await expect(page.locator("text=Upload your base resume")).toBeVisible();
+  25 | 
+  26 |   // Click Use our sample resume
+  27 |   await page.click('button:has-text("Use our sample resume")');
+  28 |   await expect(page.locator("text=Alex_Rivera_Frontend_Engineer.pdf")).toBeVisible();
+  29 | 
+  30 |   // Click Continue to Job Description
+  31 |   await page.click('button:has-text("Continue to Job Description")');
+  32 |   await page.waitForSelector("text=STEP 02", { timeout: 5000 });
+  33 | 
+  34 |   // Load Sample Job
+  35 |   await page.click('button:has-text("Load Sample Job")');
+  36 |   const jobText = await page.locator("textarea").inputValue();
+  37 |   expect(jobText).toContain("Senior Frontend Engineer");
+  38 | 
+  39 |   // Optimize & Tailor Resume
+  40 |   await page.click('button:has-text("Optimize Resume")');
+  41 | 
+  42 |   // Wait for step 4 Results
+> 43 |   await page.waitForSelector("text=Tailored Resume Ready", { timeout: 240000 });
+     |              ^ TimeoutError: page.waitForSelector: Timeout 240000ms exceeded.
+  44 |   await expect(page.locator("text=ATS Score Compatibility")).toBeVisible();
+  45 | 
+  46 |   // Wait for auto-save to register
+  47 |   await page.waitForTimeout(3000);
+  48 | 
+  49 |   // 2. Clear sessionStorage to test direct fresh login / page load navigation
+  50 |   await page.evaluate(() => {
+  51 |     sessionStorage.clear();
+  52 |   });
+  53 | 
+  54 |   // Navigate to /dashboard again
+  55 |   await page.goto("http://localhost:3000/dashboard?mock_auth=true");
+  56 |   await page.waitForLoadState("load");
+  57 | 
+  58 |   // Verify that it bypasses Step 1/2/3 and loads straight into Step 4 Results
+  59 |   await page.waitForSelector("text=Tailored Resume Ready", { timeout: 20000 });
+  60 |   await expect(page.locator("text=ATS Score Compatibility")).toBeVisible();
+  61 | 
+  62 |   // Open template tab
+  63 |   await page.click('button:has-text("Template & PDF")');
+  64 |   await page.waitForSelector("text=Visual Layout Preview", { timeout: 5000 });
+  65 | 
+  66 |   // Select Modern Tech template
+  67 |   await page.click('text=Modern Tech');
+  68 | 
+  69 |   // Download PDF and assert file characteristics
+  70 |   const [downloadPdf] = await Promise.all([
+  71 |     page.waitForEvent("download"),
+  72 |     page.getByRole("button", { name: "Download PDF", exact: true }).first().click()
+  73 |   ]);
+  74 | 
+  75 |   const pdfFilename = downloadPdf.suggestedFilename();
+  76 |   expect(pdfFilename).toContain("Modern");
+  77 |   expect(pdfFilename.endsWith(".pdf")).toBe(true);
+  78 | });
+  79 | 
 ```
