@@ -49,7 +49,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [useSupabase] = useState(() => {
     if (typeof window !== "undefined") {
       const searchParams = new URLSearchParams(window.location.search);
-      const forceMock = searchParams.get("mock_auth") === "true";
+      const isDevOrTest = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_E2E_TEST_MODE === "true";
+      const forceMock = isDevOrTest && searchParams.get("mock_auth") === "true";
       return isSupabaseConfigured && !forceMock;
     }
     return false;
@@ -69,21 +70,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // 1. Initial Session Loader & Auth Listener
   useEffect(() => {
     if (useSupabase) {
-      // Synchronous guest loader bypass: if no active session storage tokens exist, resolve loading immediately
-      const hasSession = typeof window !== "undefined" && (() => {
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && (key.startsWith("sb-") || key === "atsprime_session")) {
-            return true;
-          }
-        }
-        return false;
-      })();
-
-      if (!hasSession) {
-        setTimeout(() => setLoading(false), 0);
-      }
-
       const loadProfileAndSetUser = async (sessionUser: { id: string; email?: string; user_metadata?: { full_name?: string; name?: string; avatar_url?: string } }) => {
         let name = sessionUser.user_metadata?.full_name || sessionUser.user_metadata?.name || sessionUser.email?.split("@")[0] || "";
         let avatarUrl = sessionUser.user_metadata?.avatar_url || undefined;
@@ -109,12 +95,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       };
 
-      // Get initial session
-      supabase.auth.getSession().then(({ data: { session } }) => {
+      // Get initial session or sign in anonymously if guest
+      supabase.auth.getSession().then(async ({ data: { session } }) => {
         if (session?.user) {
-          loadProfileAndSetUser(session.user).then(() => setLoading(false));
-        } else {
+          await loadProfileAndSetUser(session.user);
           setLoading(false);
+        } else {
+          try {
+            const { data, error } = await supabase.auth.signInAnonymously();
+            if (error) throw error;
+            if (data?.user) {
+              await loadProfileAndSetUser(data.user);
+            }
+          } catch (err) {
+            console.error("Anonymous authentication failed during app initialization:", err);
+          } finally {
+            setLoading(false);
+          }
         }
       });
 

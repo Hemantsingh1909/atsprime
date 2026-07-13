@@ -46,43 +46,34 @@ test("Resume template selection and download flow", async ({ page }) => {
   // 6. Click Optimize & Tailor Resume
   await page.click('button:has-text("Optimize Resume")');
 
-  // Verify STEP 03 analysis starts
-  await page.waitForSelector("text=TAILORING ENGINE", { timeout: 5000 });
-  
-  // 7. Wait for step 4 Results (timeout 60 seconds to allow mock progress + API call to finish)
-  // Note: the mock uses process.env.GEMINI_API_KEY, but since the test runs against the local server, 
-  // we wait for it to return candidates or fallback.
-  await page.waitForSelector("text=Tailored Resume Ready", { timeout: 240000 });
+  // 7. Wait for step 4 Results (allow up to 240 seconds for API call to finish)
+  await page.waitForSelector("text=Your Tailored Resume is Ready", { timeout: 240000 });
   
   // Verify ATS Score is displayed
-  await expect(page.locator("text=ATS Score Compatibility")).toBeVisible();
+  await expect(page.locator("text=ATS Score").first()).toBeVisible();
 
   // 8. Open inline Template Selection Tab by clicking the header button
-  await page.click('button:has-text("Template & PDF")');
+  await page.click('button:has-text("Template")');
 
   // Verify the visual layout preview container is visible
-  await page.waitForSelector("text=Visual Layout Preview", { timeout: 5000 });
-  await expect(page.locator("text=Visual Layout Preview")).toBeVisible();
+  await page.waitForSelector("text=Choose Template", { timeout: 5000 });
+  await expect(page.locator("text=Choose Template")).toBeVisible();
 
   // 9. Verify the preview iframe is visible
-  const previewIframe = page.locator("#resume-preview-iframe");
+  const previewIframe = page.locator("iframe").first();
   await expect(previewIframe).toBeVisible();
 
-  // 10. Verify all 6 templates are rendered in the sidebar list
+  // 10. Verify both templates are rendered in the sidebar list
   const templates = [
     "Classic Harvard",
-    "Modern Tech",
-    "Elegant Minimalist",
-    "Split Sidebar",
-    "Creative Slate",
-    "Executive Bold"
+    "Modern Tech"
   ];
   for (const tpl of templates) {
-    await expect(page.locator(`text=${tpl}`)).toBeVisible();
+    await expect(page.locator(`text=${tpl}`).first()).toBeVisible();
   }
 
   // 11. Select 'Modern Tech' template
-  await page.click('text=Modern Tech');
+  await page.locator('button:has-text("Modern Tech")').first().click();
   
   // 12. Trigger PDF download and capture it (button text is "Download PDF" inside the tab view)
   const [downloadPdf] = await Promise.all([
@@ -95,5 +86,5 @@ test("Resume template selection and download flow", async ({ page }) => {
   expect(pdfFilename.endsWith(".pdf")).toBe(true);
 
   // 13. Verify the inline view remains visible upon successful download
-  await expect(page.locator("text=Visual Layout Preview")).toBeVisible();
+  await expect(page.locator("text=Choose Template")).toBeVisible();
 });

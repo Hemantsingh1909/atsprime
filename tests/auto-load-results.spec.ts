@@ -40,8 +40,8 @@ test("Auto-load saved resume redirect to Step 4 and template download content ve
   await page.click('button:has-text("Optimize Resume")');
 
   // Wait for step 4 Results
-  await page.waitForSelector("text=Tailored Resume Ready", { timeout: 240000 });
-  await expect(page.locator("text=ATS Score Compatibility")).toBeVisible();
+  await page.waitForSelector("text=Your Tailored Resume is Ready", { timeout: 240000 });
+  await expect(page.locator("text=ATS Score")).toBeVisible();
 
   // Wait for auto-save to register
   await page.waitForTimeout(3000);
@@ -56,15 +56,15 @@ test("Auto-load saved resume redirect to Step 4 and template download content ve
   await page.waitForLoadState("load");
 
   // Verify that it bypasses Step 1/2/3 and loads straight into Step 4 Results
-  await page.waitForSelector("text=Tailored Resume Ready", { timeout: 20000 });
-  await expect(page.locator("text=ATS Score Compatibility")).toBeVisible();
+  await page.waitForSelector("text=Your Tailored Resume is Ready", { timeout: 20000 });
+  await expect(page.locator("text=ATS Score")).toBeVisible();
 
   // Open template tab
-  await page.click('button:has-text("Template & PDF")');
-  await page.waitForSelector("text=Visual Layout Preview", { timeout: 5000 });
+  await page.click('button:has-text("Template")');
+  await page.waitForSelector("text=Choose Template", { timeout: 5000 });
 
   // Select Modern Tech template
-  await page.click('text=Modern Tech');
+  await page.click('button:has-text("Modern Tech")');
 
   // Download PDF and assert file characteristics
   const [downloadPdf] = await Promise.all([

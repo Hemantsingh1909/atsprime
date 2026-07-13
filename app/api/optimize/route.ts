@@ -33,11 +33,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Detect if this is the sample resume (e.g. from E2E test runs) to bypass API rate limits and speed up tests
-    const isSampleResume = activeResumeText && activeResumeText.includes("alex.rivera@dev.io");
+    // Secure E2E test bypass: Only active if E2E_TEST_MODE is true AND E2E key matches
+    const e2eHeader = request.headers.get("x-e2e-test-key") || "";
+    const isE2EMode = process.env.E2E_TEST_MODE === "true" && e2eHeader === "e2e-mock-bypass-token-2026";
 
-    if (isSampleResume) {
-      console.log("[GEMINI STATUS]: BYPASSED (Sample resume / E2E test detected. Bypassing live API calls to prevent rate limits.)");
+    if (isE2EMode) {
+      console.log("[GEMINI STATUS]: BYPASSED (Secure E2E test detected via headers and environment. Bypassing live API calls to prevent rate limits.)");
       const fallbackData = {
         originalResumeText: activeResumeText,
         tailoredResumeText: `Alex Rivera
@@ -85,6 +86,7 @@ Software Engineer Intern | CodeLabs (2023)
       };
 
       const simulatedResponse = {
+        is_mock: true,
         candidates: [
           {
             content: {

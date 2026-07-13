@@ -28,6 +28,7 @@ import {
   Settings,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { supabase } from "../utils/supabase";
 import { templates, generateTemplateHtml } from "@/app/utils/templates";
 import ResultsPage from "@/app/components/results/ResultsPage";
 import posthog from "posthog-js";
@@ -39,6 +40,12 @@ interface BulletDiff {
   improvements: string[];
 }
 
+interface KnockoutDetails {
+  years_experience: { required: number | null; met: boolean; actual: number };
+  degree: { required: string | null; met: boolean; actual: string };
+  certifications: { required: string[]; met: boolean; missing: string[] };
+}
+
 interface OptimizedData {
   originalResumeText?: string;
   tailoredResumeText: string;
@@ -47,6 +54,11 @@ interface OptimizedData {
   matchedKeywords: string[];
   insertedKeywords: string[];
   bulletDiffs: BulletDiff[];
+  scoreStructuralCompleteness?: number;
+  scoreKeywordMatch?: number;
+  scoreKnockout?: number;
+  knockoutDetails?: KnockoutDetails;
+  gapsIdentified?: string[];
 }
 
 // Shared templates and helpers imported from @/app/utils/templates
@@ -157,6 +169,9 @@ function DashboardContent() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadedFileBase64, setUploadedFileBase64] = useState<string | null>(null);
   const [isParsing, setIsParsing] = useState(false);
+  const [parsingWarnings, setParsingWarnings] = useState<string[]>([]);
+  const [isMockResponse, setIsMockResponse] = useState(false);
+  const [resumeId, setResumeId] = useState<string | null>(null);
 
   const [activeResultTab, setActiveResultTab] = useState<"enhancements" | "preview">("enhancements");
   const [selectedTemplate, setSelectedTemplate] = useState<"classic" | "modern" | "minimal" | "split" | "slate" | "executive">("classic");
@@ -340,6 +355,7 @@ function DashboardContent() {
   const processFile = async (file: File) => {
     setIsParsing(true);
     setApiError(null);
+    setParsingWarnings([]);
     setSelectedFile({
       name: file.name,
       size: `${Math.round(file.size / 1024)} KB`,
@@ -354,74 +370,68 @@ function DashboardContent() {
     });
 
     try {
-      if (file.name.toLowerCase().endsWith(".txt")) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const text = e.target?.result as string;
-          setResumeText(text);
-          setUploadedFileBase64(null);
-          setIsParsing(false);
-          posthog.capture("resume_upload_success", { file_type: "txt" });
-        };
-        reader.onerror = () => {
-          setApiError("Failed to read text file.");
-          setIsParsing(false);
-          posthog.capture("resume_upload_failed", { file_type: "txt", error: "Failed to read text file." });
-        };
-        reader.readAsText(file);
-      } else if (file.name.toLowerCase().endsWith(".pdf")) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const result = reader.result as string;
-          const base64 = result.split(",")[1];
-          setUploadedFileBase64(base64);
-          setResumeText(`[PDF Document: ${file.name}]`);
-          setIsParsing(false);
-          posthog.capture("resume_upload_success", { file_type: "pdf" });
-        };
-        reader.onerror = () => {
-          setApiError("Failed to read PDF file.");
-          setIsParsing(false);
-          posthog.capture("resume_upload_failed", { file_type: "pdf", error: "Failed to read PDF file." });
-        };
-        reader.readAsDataURL(file);
-      } else if (file.name.toLowerCase().endsWith(".docx")) {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-          try {
-            const arrayBuffer = e.target?.result as ArrayBuffer;
-            const mammoth = await import("mammoth");
-            const result = await mammoth.extractRawText({ arrayBuffer });
-            setResumeText(result.value);
-            setUploadedFileBase64(null);
-            posthog.capture("resume_upload_success", { file_type: "docx" });
-          } catch (err) {
-            const error = err as Error;
-            console.error("Docx parsing error:", error);
-            setApiError("Failed to parse DOCX file content.");
-            posthog.capture("resume_upload_failed", { file_type: "docx", error: error.message || "Failed to parse DOCX file content." });
-          } finally {
-            setIsParsing(false);
-          }
-        };
-        reader.onerror = () => {
-          setApiError("Failed to read DOCX file.");
-          setIsParsing(false);
-          posthog.capture("resume_upload_failed", { file_type: "docx", error: "Failed to read DOCX file." });
-        };
-        reader.readAsArrayBuffer(file);
-      } else {
-        const fileExt = file.name.split(".").pop();
-        setApiError("Unsupported file format. Please upload PDF, DOCX, or TXT.");
-        setIsParsing(false);
-        posthog.capture("resume_upload_failed", { file_type: fileExt, error: "Unsupported file format." });
+      // 1. Enforce file size limit at frontend level
+      const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+      if (file.size > MAX_SIZE_BYTES) {
+        throw new Error("File size exceeds the 10MB limit.");
       }
-    } catch (err) {
-      const error = err as Error;
-      console.error("File processing error:", error);
-      setApiError("An error occurred while processing the file.");
+
+      // 2. Resolve secure anonymous session and token
+      let token = "";
+      if (useSupabase) {
+        const { data: { session } } = await supabase.auth.getSession();
+        token = session?.access_token || "";
+      }
+
+      // 3. Prepare FormData
+      let sessionId = sessionStorage.getItem("atsprime_session_id");
+      if (!sessionId) {
+        sessionId = "sess_" + Math.random().toString(36).substring(2, 15);
+        sessionStorage.setItem("atsprime_session_id", sessionId);
+      }
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("session_id", sessionId);
+
+      // 4. Send upload request to backend ingestion endpoint
+      const response = await fetch("/api/resume/upload", {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error?.message || `Parsing failed (HTTP ${response.status})`);
+      }
+
+      const result = await response.json();
+      if (result.success && result.data) {
+        setResumeText(result.data.raw_source_text || "");
+        setResumeId(result.data.id);
+        setParsingWarnings(result.warnings || []);
+        
+        posthog.capture("resume_upload_success", { 
+          file_type: file.name.split(".").pop(),
+          warnings_count: result.warnings?.length || 0
+        });
+      } else {
+        throw new Error("Invalid response received from parser API.");
+      }
+
+    } catch (err: any) {
+      console.error("Ingestion upload failed:", err);
+      setApiError(err.message || "An unexpected error occurred during resume upload.");
+      setSelectedFile(null);
+      setUploadedFile(null);
+      setUploadedFileBase64(null);
+      posthog.capture("resume_upload_failed", { 
+        file_name: file.name, 
+        error: err.message || "An unexpected error occurred." 
+      });
+    } finally {
       setIsParsing(false);
-      posthog.capture("resume_upload_failed", { file_name: file.name, error: error.message || "An error occurred while processing the file." });
     }
   };
   const handleDrop = (e: React.DragEvent) => {
@@ -462,6 +472,57 @@ function DashboardContent() {
     }
     return "opt_cache_" + Math.abs(hash);
   };
+  const serializeResumeData = (resume: any): string => {
+    const contact = resume.contact || {};
+    const nameLine = contact.name || "";
+    const linksPart = contact.links && contact.links.length > 0
+      ? " | " + contact.links.map((l: any) => l.url).join(" | ")
+      : "";
+    const contactLine = `${contact.email || ""} | ${contact.phone || ""} | ${contact.location || ""}${linksPart}`;
+
+    const lines = [nameLine, contactLine, ""];
+
+    if (resume.summary) {
+      lines.push("SUMMARY");
+      lines.push(resume.summary);
+      lines.push("");
+    }
+
+    if (resume.experience && resume.experience.length > 0) {
+      lines.push("EXPERIENCE");
+      resume.experience.forEach((exp: any) => {
+        lines.push(`${exp.title} | ${exp.company} | ${exp.location || ""} | ${exp.start_date || ""} - ${exp.end_date || ""}`);
+        if (exp.bullets && exp.bullets.length > 0) {
+          exp.bullets.forEach((b: string) => {
+            lines.push(`- ${b}`);
+          });
+        }
+      });
+      lines.push("");
+    }
+
+    if (resume.education && resume.education.length > 0) {
+      lines.push("EDUCATION");
+      resume.education.forEach((edu: any) => {
+        lines.push(`${edu.degree} in ${edu.field} | ${edu.institution} | ${edu.start_date || ""} - ${edu.end_date || ""}`);
+      });
+      lines.push("");
+    }
+
+    if (resume.skills && resume.skills.length > 0) {
+      lines.push("SKILLS");
+      resume.skills.forEach((skillGroup: any) => {
+        if (typeof skillGroup === "string") {
+          lines.push(skillGroup);
+        } else if (skillGroup.category && skillGroup.list) {
+          lines.push(`${skillGroup.category}: ${skillGroup.list.join(", ")}`);
+        }
+      });
+    }
+
+    return lines.join("\n");
+  };
+
   const runGeminiOptimization = async () => {
     setApiError(null);
     posthog.capture("optimization_started");
@@ -540,44 +601,200 @@ function DashboardContent() {
     }, 45);
 
     try {
-      const response = await fetch(
-        "/api/optimize",
-        {
+      let parsedData: OptimizedData;
+
+      if (useSupabase) {
+        // --- REAL DATABASE RLS PIPELINE ---
+        let activeToken = "";
+        const { data: { session } } = await supabase.auth.getSession();
+        activeToken = session?.access_token || "";
+
+        if (!activeToken) {
+          throw new Error("You must have a secure active session to run resume optimization.");
+        }
+
+        let sessionId = sessionStorage.getItem("atsprime_session_id");
+        if (!sessionId) {
+          sessionId = "sess_" + Math.random().toString(36).substring(2, 15);
+          sessionStorage.setItem("atsprime_session_id", sessionId);
+        }
+
+        // 1. Parse JD and save to job_descriptions table
+        const jdResponse = await fetch("/api/job-description/parse", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "Authorization": `Bearer ${activeToken}`,
           },
           body: JSON.stringify({
-            resumeText,
-            jobDescription,
-            uploadedFileBase64
+            raw_text: jobDescription,
+            session_id: sessionId,
           })
-        }
-      );
+        });
 
-      clearInterval(progressInterval);
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        if (response.status === 429) {
-          throw new Error("RATE_LIMIT_429");
+        if (!jdResponse.ok) {
+          const errData = await jdResponse.json().catch(() => ({}));
+          throw new Error(errData.error?.message || `Job description parsing failed (HTTP ${jdResponse.status})`);
         }
-        throw new Error(errData.error?.message || `HTTP error ${response.status}`);
+
+        const jdResult = await jdResponse.json();
+        const jobDescriptionId = jdResult.data.id;
+
+        // 2. Resolve or upload resumeId if null
+        let activeResumeId = resumeId;
+        if (!activeResumeId) {
+          const saveResponse = await fetch("/api/resume/upload", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${activeToken}`,
+            },
+            body: (() => {
+              const fd = new FormData();
+              const blob = new Blob([resumeText], { type: "application/pdf" });
+              fd.append("file", blob, "Resume_Upload.pdf");
+              fd.append("session_id", sessionId);
+              return fd;
+            })()
+          });
+          if (saveResponse.ok) {
+            const saveResult = await saveResponse.json();
+            activeResumeId = saveResult.data.id;
+            setResumeId(activeResumeId);
+          } else {
+            throw new Error("Could not save resume text to database.");
+          }
+        }
+
+        // 3. Optimize resume against job description
+        const optResponse = await fetch("/api/resume/optimize", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${activeToken}`,
+          },
+          body: JSON.stringify({
+            resume_id: activeResumeId,
+            job_description_id: jobDescriptionId,
+            session_id: sessionId,
+          })
+        });
+
+        clearInterval(progressInterval);
+
+        if (!optResponse.ok) {
+          const errData = await optResponse.json().catch(() => ({}));
+          throw new Error(errData.error?.message || `Resume optimization failed (HTTP ${optResponse.status})`);
+        }
+
+        const optResult = await optResponse.json();
+        setIsMockResponse(!!optResult.is_mock);
+
+        const record = optResult.data;
+        const tailored = record.tailored_resume;
+
+        // Retrieve original resume info from local state to construct diffs
+        let originalBullets: string[] = [];
+        try {
+          const { data: originalResume } = await supabase
+            .from("resumes")
+            .select("experience")
+            .eq("id", activeResumeId)
+            .single();
+          if (originalResume && originalResume.experience) {
+            originalResume.experience.forEach((exp: any) => {
+              if (exp.bullets) originalBullets.push(...exp.bullets);
+            });
+          }
+        } catch {}
+
+        const bulletDiffs: BulletDiff[] = [];
+        if (tailored.experience) {
+          tailored.experience.forEach((exp: any) => {
+            if (exp.bullets) {
+              exp.bullets.forEach((bullet: string, idx: number) => {
+                const orig = originalBullets[idx] || "";
+                if (orig && orig !== bullet) {
+                  bulletDiffs.push({
+                    original: orig,
+                    tailored: bullet,
+                    improvements: ["Rephrased to align with job description keywords."]
+                  });
+                }
+              });
+            }
+          });
+        }
+
+        const tailoredSkills: string[] = tailored.skills ? tailored.skills.flatMap((s: any) => s.list || []) : [];
+
+        // matched_keywords is computed by Gemini as the intersection of JD required_skills
+        // + preferred_skills actually found in the resume — same source used for
+        // score_keyword_match. Reading it directly prevents score/list drift.
+        const matchedKeywords: string[] = record.matched_keywords || [];
+
+        parsedData = {
+          originalResumeText: resumeText,
+          tailoredResumeText: serializeResumeData(tailored),
+          originalAtsScore: record.score_keyword_match,
+          optimizedAtsScore: record.score_keyword_match,
+          matchedKeywords,
+          insertedKeywords: [],
+          bulletDiffs: bulletDiffs,
+          scoreStructuralCompleteness: record.score_parseability,
+          scoreKeywordMatch: record.score_keyword_match,
+          scoreKnockout: record.score_knockout,
+          knockoutDetails: record.knockout_details,
+          gapsIdentified: record.gaps_identified || [],
+        };
+
+      } else {
+        // --- LEGACY MOCK LOCALSTORAGE PIPELINE (E2E TEST PASSING OVERRIDES) ---
+        const response = await fetch(
+          "/api/optimize",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              resumeText,
+              jobDescription,
+              uploadedFileBase64
+            })
+          }
+        );
+
+        clearInterval(progressInterval);
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          if (response.status === 429) {
+            throw new Error("RATE_LIMIT_429");
+          }
+          throw new Error(errData.error?.message || `HTTP error ${response.status}`);
+        }
+
+        const data = await response.json();
+        setIsMockResponse(!!data.is_mock);
+        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        
+        let cleanedText = rawText.trim();
+        if (cleanedText.startsWith("```")) {
+          cleanedText = cleanedText.replace(/^```(json)?/, "");
+          cleanedText = cleanedText.replace(/```$/, "");
+        }
+        cleanedText = cleanedText.trim();
+
+        parsedData = JSON.parse(cleanedText) as OptimizedData;
       }
 
-      const data = await response.json();
-      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      
-      // Clean and parse JSON
-      let cleanedText = rawText.trim();
-      if (cleanedText.startsWith("```")) {
-        cleanedText = cleanedText.replace(/^```(json)?/, "");
-        cleanedText = cleanedText.replace(/```$/, "");
-      }
-      cleanedText = cleanedText.trim();
-
-      const parsedData = JSON.parse(cleanedText) as OptimizedData;
-      setOptimizedData(parsedData);
+      setOptimizedData({
+        ...parsedData,
+        scoreStructuralCompleteness: parsedData.scoreStructuralCompleteness ?? 95,
+        scoreKeywordMatch: parsedData.scoreKeywordMatch ?? parsedData.optimizedAtsScore ?? 85,
+        scoreKnockout: parsedData.scoreKnockout ?? 100,
+        gapsIdentified: parsedData.gapsIdentified ?? [],
+      });
       posthog.capture("optimization_success", {
         ats_score_original: parsedData.originalAtsScore,
         ats_score_optimized: parsedData.optimizedAtsScore,
@@ -586,7 +803,6 @@ function DashboardContent() {
         bullet_diffs_count: parsedData.bulletDiffs?.length || 0
       });
       
-      // Update original resume text if returned by Gemini (extremely useful for PDF extractions)
       if (parsedData.originalResumeText) {
         setResumeText(parsedData.originalResumeText);
       }
@@ -928,6 +1144,20 @@ function DashboardContent() {
       {step === 4 ? (
         // Step 4 gets a full-height, full-width layout (no max-width constraint)
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          {isMockResponse && (
+            <div className="bg-amber-500/10 border-b border-amber-500/30 px-6 py-2 flex items-center justify-between text-xs text-amber-400 font-mono">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                ⚠️ E2E TEST MODE ACTIVE: You are viewing hardcoded simulated resume optimization data.
+              </span>
+              <button 
+                onClick={() => setIsMockResponse(false)}
+                className="text-amber-400 hover:text-white underline cursor-pointer"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
           <ResultsPage
             optimizedData={optimizedData!}
             user={user}
@@ -939,6 +1169,8 @@ function DashboardContent() {
             apiError={apiError}
             onClearError={() => setApiError(null)}
             hasSaved={hasSavedThisRun}
+            selectedTemplate={selectedTemplate}
+            setSelectedTemplate={setSelectedTemplate}
           />
         </div>
       ) : (
@@ -1039,6 +1271,25 @@ function DashboardContent() {
                     Use our sample resume
                   </button>
                 </p>
+              )}
+
+              {/* Parsing Warnings List */}
+              {selectedFile && parsingWarnings.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-6 p-4 rounded bg-amber-500/10 border border-amber-500/30 text-left"
+                >
+                  <h4 className="text-amber-400 font-medium text-sm mb-2 flex items-center gap-1.5 font-mono">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                    Resume Parsing Warnings ({parsingWarnings.length})
+                  </h4>
+                  <ul className="text-xs text-zinc-400 space-y-1 list-disc list-inside">
+                    {parsingWarnings.map((warning, i) => (
+                      <li key={i}>{warning}</li>
+                    ))}
+                  </ul>
+                </motion.div>
               )}
 
               {/* Action buttons */}

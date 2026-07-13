@@ -345,8 +345,4 @@ export const generateTemplateHtml = (text: string, template: string) => {
 export const templates = [
   { id: "classic", name: "Classic Harvard", desc: "Traditional serif, centered headers, thin divider lines." },
   { id: "modern", name: "Modern Tech", desc: "Clean sans-serif, bold metadata, optimized for tech positions." },
-  { id: "minimal", name: "Elegant Minimalist", desc: "Georgia serif, wide margins, elegant layout spacing." },
-  { id: "split", name: "Split Sidebar", desc: "Two-column layout separating contact/skills from experience." },
-  { id: "slate", name: "Creative Slate", desc: "Monospace accents, slate grey box titles, bold borders." },
-  { id: "executive", name: "Executive Bold", desc: "Calibri corporate style with dark navy header accents." },
 ];

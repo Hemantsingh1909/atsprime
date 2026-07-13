@@ -28,6 +28,7 @@ import {
   PenTool,
   Check,
   BookOpen,
+  AlertTriangle,
 } from "lucide-react";
 import { templates, generateTemplateHtml } from "@/app/utils/templates";
 
@@ -35,6 +36,12 @@ interface BulletDiff {
   original: string;
   tailored: string;
   improvements: string[];
+}
+
+interface KnockoutDetails {
+  years_experience: { required: number | null; met: boolean; actual: number };
+  degree: { required: string | null; met: boolean; actual: string };
+  certifications: { required: string[]; met: boolean; missing: string[] };
 }
 
 interface OptimizedData {
@@ -45,6 +52,11 @@ interface OptimizedData {
   matchedKeywords: string[];
   insertedKeywords: string[];
   bulletDiffs: BulletDiff[];
+  scoreStructuralCompleteness?: number;
+  scoreKeywordMatch?: number;
+  scoreKnockout?: number;
+  knockoutDetails?: KnockoutDetails;
+  gapsIdentified?: string[];
 }
 
 interface User {
@@ -64,6 +76,8 @@ interface ResultsPageProps {
   apiError: string | null;
   onClearError: () => void;
   hasSaved: boolean;
+  selectedTemplate: "classic" | "modern" | "minimal" | "split" | "slate" | "executive";
+  setSelectedTemplate: (tpl: "classic" | "modern" | "minimal" | "split" | "slate" | "executive") => void;
 }
 
 function ScoreDonut({ score, size = 110 }: { score: number; size?: number }) {
@@ -132,8 +146,8 @@ function TemplateThumbnail({ id, name, selected, onClick, idx }: {id:string;name
 export default function ResultsPage({
   optimizedData, user, onBack, onStartOver, onSignOut,
   onDownload, downloadingPdf, apiError, onClearError, hasSaved,
+  selectedTemplate, setSelectedTemplate,
 }: ResultsPageProps) {
-  const [selectedTemplate, setSelectedTemplate] = useState<"classic"|"modern"|"minimal"|"split"|"slate"|"executive">("modern");
   const [activeTab, setActiveTab] = useState<"preview"|"template"|"sections"|"ai">("preview");
   const [rightTab, setRightTab] = useState<"analysis"|"aireview">("analysis");
   const [downloadDropdownOpen, setDownloadDropdownOpen] = useState(false);
@@ -142,26 +156,44 @@ export default function ResultsPage({
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const score = optimizedData.optimizedAtsScore;
-  const originalScore = optimizedData.originalAtsScore;
-  const scoreDelta = score - originalScore;
   const matched = optimizedData.matchedKeywords ?? [];
   const inserted = optimizedData.insertedKeywords ?? [];
 
+  // Match tier evaluations
+  const isKnockoutFailed = optimizedData.scoreKnockout === 0;
+  let matchBadgeText = "Excellent Match";
+  let matchTierText = "Highly Relevant";
+  let matchColorClass = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+  let matchDescription = "Your resume matches the core requirements and target experience level for this position.";
+
+  if (isKnockoutFailed) {
+    matchBadgeText = "Failed Knockouts";
+    matchTierText = "Not Recommended";
+    matchColorClass = "bg-red-500/10 text-red-400 border-red-500/20";
+    matchDescription = "Your profile is missing hard knockout criteria (required experience, degree, or certifications) specified in the job description.";
+  } else if (score < 50) {
+    matchBadgeText = "Poor Match";
+    matchTierText = "Low Relevance";
+    matchColorClass = "bg-red-500/10 text-red-400 border-red-500/20";
+    matchDescription = "Your resume has a low keyword alignment with the target job requirements.";
+  } else if (score < 80) {
+    matchBadgeText = "Good Match";
+    matchTierText = "Good Fit";
+    matchColorClass = "bg-amber-500/10 text-amber-400 border-amber-500/20";
+    matchDescription = "Your resume matches most of the required skills, but has room for keyword and content optimization.";
+  }
+
   const breakdown = [
-    { label:"Format & Structure", value:Math.min(99,score+3) },
-    { label:"Keywords",           value:Math.min(99,score-2) },
-    { label:"Content Relevance",  value:Math.min(99,score-3) },
-    { label:"Experience",         value:Math.min(99,score-4) },
-    { label:"Skills",             value:Math.min(99,score+1) },
+    { label: "Format & Structure", value: optimizedData.scoreStructuralCompleteness ?? 95 },
+    { label: "Keywords Match", value: optimizedData.scoreKeywordMatch ?? score },
+    { label: "Knockout Checks", value: optimizedData.scoreKnockout ?? 100 },
   ];
 
-  const improvements = [
-    "Add more quantifiable achievements",
-    "Include more metrics in experience",
-    "Consider adding certifications",
-    "Enhance your summary section",
-    "Add technical projects",
-  ];
+  const improvements = optimizedData.gapsIdentified && optimizedData.gapsIdentified.length > 0
+    ? optimizedData.gapsIdentified
+    : [
+        "No major gaps found in requirements! Consider adding metrics to work experience.",
+      ];
 
   const sideNav = [
     {icon:LayoutGrid,label:"Dashboard",active:false},
@@ -199,14 +231,21 @@ export default function ResultsPage({
             <ScoreDonut score={score} size={110}/>
           </div>
           <div className="text-center mb-4">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-semibold">
-              <CheckCircle2 size={10}/> Excellent Match
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-semibold ${matchColorClass}`}>
+              <CheckCircle2 size={10}/> {matchBadgeText}
             </span>
           </div>
-          <div className="bg-violet/[0.08] border border-violet/20 rounded-xl px-3 py-3 text-center mb-5">
-            <p className="text-violet-300 font-bold text-[15px]">+{scoreDelta}% vs original</p>
-            <p className="text-[10px] text-zinc-500 mt-0.5 leading-relaxed">Good job! Your resume is well optimized for ATS.</p>
-          </div>
+          {optimizedData.scoreKnockout === 0 ? (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-3 text-center mb-5">
+              <p className="text-red-400 font-bold text-[13px] uppercase tracking-wider">Knockout Failed</p>
+              <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">Your profile is missing key required credentials from the Job Description.</p>
+            </div>
+          ) : (
+            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-3 text-center mb-5">
+              <p className="text-emerald-400 font-bold text-[13px] uppercase tracking-wider">Knockouts Passed</p>
+              <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">All mandatory experience, degree, and certification requirements were met!</p>
+            </div>
+          )}
           <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3">Score Breakdown</p>
           <div className="space-y-2.5">
             {breakdown.map(b=><MiniBar key={b.label} label={b.label} value={b.value}/>)}
@@ -423,7 +462,7 @@ export default function ResultsPage({
                 <Target size={13} className="text-violet-400"/>
                 <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Job Match</span>
               </div>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-semibold border border-emerald-500/20">Highly Relevant</span>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${matchColorClass}`}>{matchTierText}</span>
             </div>
             <div className="flex items-end gap-2 mb-3">
               <span className="text-[38px] font-black text-white leading-none">{score}</span>
@@ -443,28 +482,75 @@ export default function ResultsPage({
               </div>
             </div>
             <p className="text-[11px] text-zinc-400 leading-relaxed mb-3">
-              Your resume is highly relevant to this job description. You match most of the key requirements.
+              {matchDescription}
             </p>
-            <p className="text-[11px] font-semibold text-zinc-300 mb-2">Top Matched Skills</p>
-            <div className="space-y-1.5">
-              {matched.slice(0,5).map(kw=>(
-                <div key={kw} className="flex items-center gap-2">
-                  <Check size={11} className="text-emerald-400 flex-shrink-0" strokeWidth={2.5}/>
-                  <span className="text-[11px] text-zinc-300">{kw}</span>
+            {matched.length > 0 && (
+              <>
+                <p className="text-[11px] font-semibold text-zinc-300 mb-2">Top Matched Skills</p>
+                <div className="space-y-1.5">
+                  {matched.slice(0,5).map(kw=>(
+                    <div key={kw} className="flex items-center gap-2">
+                      <Check size={11} className="text-emerald-400 flex-shrink-0" strokeWidth={2.5}/>
+                      <span className="text-[11px] text-zinc-300">{kw}</span>
+                    </div>
+                  ))}
+                  {matched.length > 5 && (
+                    <div className="text-[10px] text-violet-400 font-semibold mt-1">+{matched.length-5} more</div>
+                  )}
                 </div>
-              ))}
-              {matched.length>5&&(
-                <button className="text-[11px] text-violet-400 hover:text-violet-300 font-semibold mt-1 cursor-pointer transition">+{matched.length-5} more</button>
-              )}
-            </div>
+              </>
+            )}
           </div>
 
-          {/* Improvement Suggestions */}
+          {/* Knockout Validation Details */}
+          {optimizedData.scoreKnockout === 0 && optimizedData.knockoutDetails && (
+            <div className="bg-red-950/15 border border-red-500/20 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <AlertTriangle size={14} className="text-red-400"/>
+                <span className="text-[11px] font-bold text-red-400 uppercase tracking-wider">Knockout Validation Details</span>
+              </div>
+              <div className="space-y-2.5 text-[11px]">
+                {optimizedData.knockoutDetails.years_experience && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400">Required Experience:</span>
+                    <span className={optimizedData.knockoutDetails.years_experience.met ? "text-emerald-400 font-semibold" : "text-red-400 font-semibold"}>
+                      {optimizedData.knockoutDetails.years_experience.required} Years (Got {optimizedData.knockoutDetails.years_experience.actual})
+                    </span>
+                  </div>
+                )}
+                {optimizedData.knockoutDetails.degree && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400">Required Degree:</span>
+                    <span className={optimizedData.knockoutDetails.degree.met ? "text-emerald-400 font-semibold" : "text-red-400 font-semibold"}>
+                      {optimizedData.knockoutDetails.degree.required} (Got {optimizedData.knockoutDetails.degree.actual || "None"})
+                    </span>
+                  </div>
+                )}
+                {optimizedData.knockoutDetails.certifications && (
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-zinc-400">Required Certifications:</span>
+                      <span className={optimizedData.knockoutDetails.certifications.met ? "text-emerald-400 font-semibold" : "text-red-400 font-semibold"}>
+                        {optimizedData.knockoutDetails.certifications.met ? "Met" : "Missing"}
+                      </span>
+                    </div>
+                    {!optimizedData.knockoutDetails.certifications.met && optimizedData.knockoutDetails.certifications.missing.length > 0 && (
+                      <div className="text-[10px] text-red-300 pl-2 leading-relaxed">
+                        Missing: {optimizedData.knockoutDetails.certifications.missing.join(", ")}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Identified Requirements Gaps */}
           <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Zap size={13} className="text-amber-400"/>
-                <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Improvement Suggestions</span>
+                <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Identified Requirements Gaps</span>
               </div>
               <div className="flex items-center gap-1">
                 <span className="text-[10px] font-bold text-white bg-violet/25 border border-violet/30 px-2 py-0.5 rounded-full">{improvements.length}</span>
@@ -474,14 +560,11 @@ export default function ResultsPage({
             <div className="space-y-2 mb-4">
               {improvements.map((s,i)=>(
                 <div key={i} className="flex items-start gap-2">
-                  <TrendingUp size={11} className="text-violet-400 flex-shrink-0 mt-0.5"/>
+                  <TrendingUp size={11} className={optimizedData.gapsIdentified && optimizedData.gapsIdentified.length > 0 ? "text-red-400 flex-shrink-0 mt-0.5" : "text-violet-400 flex-shrink-0 mt-0.5"}/>
                   <span className="text-[11px] text-zinc-400 leading-relaxed">{s}</span>
                 </div>
               ))}
             </div>
-            <button className="w-full flex items-center justify-center gap-2 py-2.5 text-[13px] font-semibold text-white bg-violet-600 hover:bg-violet-500 rounded-lg transition cursor-pointer">
-              Apply All Suggestions<ChevronDown size={13}/>
-            </button>
           </div>
 
           {/* Unlock Premium */}
