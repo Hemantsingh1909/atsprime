@@ -25,6 +25,7 @@ interface AuthContextType {
   loading: boolean;
   resumesLoading: boolean;
   useSupabase: boolean;
+  isAnonymous: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ success: boolean; error?: string }>;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
@@ -43,6 +44,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [isAnonymous, setIsAnonymous] = useState(true);
   const [savedResumes, setSavedResumes] = useState<SavedResume[]>([]);
   const [loading, setLoading] = useState(true);
   const [resumesLoading, setResumesLoading] = useState(true);
@@ -98,6 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Get initial session or sign in anonymously if guest
       supabase.auth.getSession().then(async ({ data: { session } }) => {
         if (session?.user) {
+          setIsAnonymous(session.user.is_anonymous ?? true);
           await loadProfileAndSetUser(session.user);
           setLoading(false);
         } else {
@@ -105,6 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const { data, error } = await supabase.auth.signInAnonymously();
             if (error) throw error;
             if (data?.user) {
+              setIsAnonymous(data.user.is_anonymous ?? true);
               await loadProfileAndSetUser(data.user);
             }
           } catch (err) {
@@ -120,8 +124,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data: { subscription },
       } = supabase.auth.onAuthStateChange((_event, session) => {
         if (session?.user) {
+          setIsAnonymous(session.user.is_anonymous ?? true);
           loadProfileAndSetUser(session.user);
         } else {
+          setIsAnonymous(true);
           setUser(null);
           setSavedResumes([]);
         }
@@ -239,15 +245,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (email: string, password: string, fullName: string): Promise<{ success: boolean; error?: string }> => {
     if (useSupabase) {
       try {
-        const { data, error } = await supabase.auth.signUp({
-          email: email.trim().toLowerCase(),
-          password,
-          options: {
+        let authResult;
+        if (isAnonymous) {
+          // Link credentials to convert active anonymous user to permanent, preserving user ID and RLS data
+          authResult = await supabase.auth.updateUser({
+            email: email.trim().toLowerCase(),
+            password,
             data: {
               name: fullName.trim(),
             }
-          }
-        });
+          });
+        } else {
+          // Standard signup for new user
+          authResult = await supabase.auth.signUp({
+            email: email.trim().toLowerCase(),
+            password,
+            options: {
+              data: {
+                name: fullName.trim(),
+              }
+            }
+          });
+        }
+
+        const { data, error } = authResult;
 
         if (error) {
           return { success: false, error: error.message };
@@ -815,6 +836,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         resumesLoading,
         useSupabase,
+        isAnonymous,
         signUp,
         signIn,
         signInWithGoogle,

@@ -31,6 +31,7 @@ import { useAuth } from "../context/AuthContext";
 import { supabase } from "../utils/supabase";
 import { templates, generateTemplateHtml } from "@/app/utils/templates";
 import ResultsPage from "@/app/components/results/ResultsPage";
+import AuthGateModal from "@/app/components/AuthGateModal";
 import posthog from "posthog-js";
 
 // Types for resume optimization
@@ -151,6 +152,7 @@ function DashboardContent() {
     loading,
     resumesLoading,
     useSupabase,
+    isAnonymous,
   } = useAuth();
 
 
@@ -178,6 +180,10 @@ function DashboardContent() {
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadFormat, setDownloadFormat] = useState<"pdf" | "docx">("pdf");
   const [downloadDropdownOpen, setDownloadDropdownOpen] = useState(false);
+
+  // Auth gate modal state
+  const [showAuthGate, setShowAuthGate] = useState(false);
+  const [pendingDownloadFormat, setPendingDownloadFormat] = useState<"pdf" | "docx" | null>(null);
   
 
   
@@ -263,20 +269,17 @@ function DashboardContent() {
     }
   }, [user, savedResumes, loading, resumesLoading, optimizedData, hasAttemptedAutoLoad]);
 
-  // Trigger pending download after user logging in
+  // Fire pending download when isAnonymous flips false (OTP verified or sign-in completed)
+  // This runs while the user is on the same page — no redirect needed.
   useEffect(() => {
-    if (user && sessionStorage.getItem("pending_dashboard_download") === "true") {
-      sessionStorage.removeItem("pending_dashboard_download");
-      const savedFormat = sessionStorage.getItem("pending_dashboard_download_format") as "pdf" | "docx" | null;
-      if (savedFormat) {
-        sessionStorage.removeItem("pending_dashboard_download_format");
-        handleDownload(savedFormat);
-      } else {
-        handleDownload();
-      }
+    if (!isAnonymous && pendingDownloadFormat !== null) {
+      const fmt = pendingDownloadFormat;
+      setPendingDownloadFormat(null);
+      setShowAuthGate(false);
+      handleDownload(fmt);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [isAnonymous]);
 
   // Save state to sessionStorage when states change
   useEffect(() => {
@@ -747,6 +750,23 @@ function DashboardContent() {
           gapsIdentified: record.gaps_identified || [],
         };
 
+        // Persist the optimization DB row ID and selected template to localStorage.
+        // This is the cross-session recovery reference (KL-002): if the user closes the tab
+        // before completing OTP, the optimization_id can later be used to re-fetch the record
+        // from Supabase. Full cross-session restore is deferred to a future phase.
+        try {
+          if (activeResumeId) {
+            localStorage.setItem("atsprime_last_optimization", JSON.stringify({
+              optimization_id: record?.id || null,
+              resume_id: activeResumeId,
+              template: selectedTemplate,
+              timestamp: Date.now(),
+            }));
+          }
+        } catch (e) {
+          console.warn("Failed to persist optimization_id to localStorage:", e);
+        }
+
       } else {
         // --- LEGACY MOCK LOCALSTORAGE PIPELINE (E2E TEST PASSING OVERRIDES) ---
         const response = await fetch(
@@ -858,11 +878,12 @@ function DashboardContent() {
   async function handleDownload(formatOverride?: "pdf" | "docx"): Promise<boolean> {
     const activeFormat = formatOverride || downloadFormat;
 
-    if (!user) {
-      sessionStorage.setItem("pending_dashboard_download", "true");
-      sessionStorage.setItem("pending_dashboard_download_format", activeFormat);
-      const currentUrl = window.location.pathname + window.location.search;
-      router.push(`/login?redirect=${encodeURIComponent(currentUrl)}`);
+    // Gate: only permanent (non-anonymous) accounts can download.
+    // isAnonymous is derived from the real Supabase JWT is_anonymous field.
+    // Anonymous sessions have a Supabase user object, so checking !user alone is insufficient.
+    if (isAnonymous) {
+      setPendingDownloadFormat(activeFormat);
+      setShowAuthGate(true);
       return false;
     }
 
@@ -1956,6 +1977,11 @@ function DashboardContent() {
           </div>
         </div>
       </footer>
+      )}
+
+      {/* Auth gate modal — shown when anonymous user clicks Download */}
+      {showAuthGate && (
+        <AuthGateModal onClose={() => setShowAuthGate(false)} />
       )}
     </div>
   );
