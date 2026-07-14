@@ -174,6 +174,7 @@ function DashboardContent() {
   const [parsingWarnings, setParsingWarnings] = useState<string[]>([]);
   const [isMockResponse, setIsMockResponse] = useState(false);
   const [resumeId, setResumeId] = useState<string | null>(null);
+  const [optimizationId, setOptimizationId] = useState<string | null>(null);
 
   const [activeResultTab, setActiveResultTab] = useState<"enhancements" | "preview">("enhancements");
   const [selectedTemplate, setSelectedTemplate] = useState<"classic" | "modern" | "minimal" | "split" | "slate" | "executive">("classic");
@@ -213,6 +214,7 @@ function DashboardContent() {
       const savedActiveResultTab = sessionStorage.getItem("atsprime_dashboard_activeResultTab");
       const savedDiffIndex = sessionStorage.getItem("atsprime_dashboard_diffIndex");
       const savedDownloadFormat = sessionStorage.getItem("atsprime_dashboard_downloadFormat");
+      const savedOptimizationId = sessionStorage.getItem("atsprime_dashboard_optimizationId");
 
       setTimeout(() => {
         if (savedStep) {
@@ -231,16 +233,29 @@ function DashboardContent() {
         if (savedActiveResultTab) setActiveResultTab(savedActiveResultTab as typeof activeResultTab);
         if (savedDiffIndex) setDiffIndex(parseInt(savedDiffIndex, 10));
         if (savedDownloadFormat) setDownloadFormat(savedDownloadFormat as typeof downloadFormat);
+        if (savedOptimizationId) setOptimizationId(savedOptimizationId);
       }, 0);
     } catch (e) {
       console.error("Failed to restore session state:", e);
     }
   }, []);
 
+  // Hook for Playwright E2E tests to trigger auth gate modal directly
+  useEffect(() => {
+    const handleOpenModal = () => {
+      setShowAuthGate(true);
+    };
+    window.addEventListener("__e2e_open_auth_modal__", handleOpenModal);
+    return () => {
+      window.removeEventListener("__e2e_open_auth_modal__", handleOpenModal);
+    };
+  }, []);
+
   // Helper to load a saved resume state
   const loadSavedResume = (res: any) => {
     setResumeText(res.originalText);
     setJobDescription(res.jobTitle);
+    setOptimizationId(res.id);
     if (res.optimizedDataString) {
       try {
         setOptimizedData(JSON.parse(res.optimizedDataString));
@@ -281,6 +296,27 @@ function DashboardContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAnonymous]);
 
+  // Helper to update optimization status in the database (draft -> previewed -> downloaded)
+  const updateOptimizationStatus = async (newStatus: "previewed" | "downloaded") => {
+    if (useSupabase && optimizationId) {
+      try {
+        await supabase
+          .from("optimizations")
+          .update({ status: newStatus })
+          .eq("id", optimizationId);
+      } catch (err) {
+        console.warn(`Failed to update optimization status to ${newStatus}:`, err);
+      }
+    }
+  };
+
+  // Mark optimization as "previewed" once the results screen (step 4) loads
+  useEffect(() => {
+    if (step === 4 && optimizationId) {
+      updateOptimizationStatus("previewed");
+    }
+  }, [step, optimizationId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Save state to sessionStorage when states change
   useEffect(() => {
     try {
@@ -306,10 +342,15 @@ function DashboardContent() {
       sessionStorage.setItem("atsprime_dashboard_activeResultTab", activeResultTab);
       sessionStorage.setItem("atsprime_dashboard_diffIndex", String(diffIndex));
       sessionStorage.setItem("atsprime_dashboard_downloadFormat", downloadFormat);
+      if (optimizationId) {
+        sessionStorage.setItem("atsprime_dashboard_optimizationId", optimizationId);
+      } else {
+        sessionStorage.removeItem("atsprime_dashboard_optimizationId");
+      }
     } catch (e) {
       console.error("Failed to save session state:", e);
     }
-  }, [step, selectedFile, resumeText, jobDescription, optimizedData, uploadedFileBase64, selectedTemplate, activeResultTab, diffIndex, downloadFormat]);
+  }, [step, selectedFile, resumeText, jobDescription, optimizedData, uploadedFileBase64, selectedTemplate, activeResultTab, diffIndex, downloadFormat, optimizationId]);
 
   // Auto-save resume if user is logged in and results are generated
   useEffect(() => {
@@ -693,6 +734,7 @@ function DashboardContent() {
         setIsMockResponse(!!optResult.is_mock);
 
         const record = optResult.data;
+        setOptimizationId(record.id);
         const tailored = record.tailored_resume;
 
         // Retrieve original resume info from local state to construct diffs
@@ -923,12 +965,12 @@ function DashboardContent() {
         link.download = fileName;
         document.body.appendChild(link);
         link.click();
-        
         setTimeout(() => {
           document.body.removeChild(link);
           URL.revokeObjectURL(url);
         }, 1000);
 
+        await updateOptimizationStatus("downloaded");
         setDownloadSuccess(true);
         setDownloadingPdf(false);
         return true;
@@ -964,6 +1006,7 @@ function DashboardContent() {
           URL.revokeObjectURL(url);
         }, 1000);
 
+        await updateOptimizationStatus("downloaded");
         setDownloadSuccess(true);
         setDownloadingPdf(false);
         return true;

@@ -1,6 +1,40 @@
 import { NextResponse } from "next/server";
-import { chromium } from "@playwright/test";
 import { generateTemplateHtml } from "@/app/utils/templates";
+
+// Runtime detection: use @sparticuz/chromium-min + playwright-core on serverless
+// (Vercel, AWS Lambda), fall back to the locally installed @playwright/test chromium
+// in dev/CI where the full binary is available.
+// This avoids the 50MB serverless limit and the @playwright/test devDependency issue.
+async function getBrowser() {
+  const isVercel = process.env.VERCEL === "1";
+  const isLambda = process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined;
+  const isServerless = isVercel || isLambda;
+
+  if (isServerless) {
+    // Serverless path: use @sparticuz/chromium-min + playwright-core
+    const chromiumMin = await import("@sparticuz/chromium-min");
+    const { chromium } = await import("playwright-core");
+
+    const executablePath = await chromiumMin.default.executablePath(
+      // Remote Chromium binary URL — sparticuz provides a CDN-hosted build
+      // that is downloaded at runtime (not bundled), staying within size limits
+      `https://github.com/Sparticuz/chromium/releases/download/v131.0.1/chromium-v131.0.1-pack.tar`
+    );
+
+    return chromium.launch({
+      args: chromiumMin.default.args,
+      executablePath,
+      headless: true,
+    });
+  } else {
+    // Local dev / CI path: use the full @playwright/test chromium binary
+    const { chromium } = await import("@playwright/test");
+    return chromium.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+    });
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -20,36 +54,32 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Generate full styled HTML
+    // 1. Generate full styled HTML (same function as the on-screen preview iframe)
     const htmlContent = generateTemplateHtml(resumeText, templateId);
 
-    // 2. Launch Playwright headless Chromium with sandbox-disabling args
-    const browser = await chromium.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
-    });
+    // 2. Launch headless Chromium (serverless-aware)
+    const browser = await getBrowser();
     const context = await browser.newContext();
     const page = await context.newPage();
 
-    // 3. Set content of the page
-    await page.setContent(htmlContent, { waitUntil: "load", timeout: 10000 });
+    // 3. Set HTML content
+    await page.setContent(htmlContent, { waitUntil: "load", timeout: 15000 });
 
-    // 4. Generate PDF buffer (Single Page Format)
+    // 4. Generate PDF
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
-      pageRanges: "1",
       margin: {
         top: "0.2in",
         bottom: "0.2in",
         left: "0.2in",
-        right: "0.2in"
-      }
+        right: "0.2in",
+      },
     });
 
     await browser.close();
 
-    // 5. Construct direct attachment response
+    // 5. Return as downloadable attachment
     const headers = new Headers();
     const formattedTemplateName = templateId.charAt(0).toUpperCase() + templateId.slice(1);
     headers.set("Content-Type", "application/pdf");
@@ -60,7 +90,7 @@ export async function POST(request: Request) {
 
     return new Response(new Uint8Array(pdfBuffer), {
       status: 200,
-      headers
+      headers,
     });
   } catch (err) {
     const error = err as Error;

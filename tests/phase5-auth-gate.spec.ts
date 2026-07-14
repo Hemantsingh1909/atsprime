@@ -72,6 +72,30 @@ test("Phase 5: Auth gate and anonymous-to-permanent session transfer", async ({ 
     }
   });
 
+  // Mock token refresh and exchange endpoint to prevent 401s on session load/update
+  await page.route("**/auth/v1/token*", async (route) => {
+    console.log("Mock /auth/v1/token* called. isAnonymousSession =", isAnonymousSession);
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        access_token: "mock.perm.token",
+        token_type: "bearer",
+        expires_in: 3600,
+        refresh_token: "mock-perm-refresh-456",
+        user: {
+          id: "99999999-9999-9999-9999-999999999999",
+          aud: "authenticated",
+          role: "authenticated",
+          email: "alex.rivera@example.com",
+          is_anonymous: false,
+          app_metadata: { provider: "email" },
+          user_metadata: { name: "Alex Rivera" }
+        }
+      })
+    });
+  });
+
   await page.route("**/auth/v1/verify*", async (route, request) => {
     const postData = JSON.parse(request.postData() || "{}");
     console.log("Mock Supabase Auth verify OTP call:", postData);
@@ -114,7 +138,8 @@ test("Phase 5: Auth gate and anonymous-to-permanent session transfer", async ({ 
   });
 
   // Mock token/user refresh endpoint to maintain the mocked session status
-  await page.route("**/auth/v1/user", async (route) => {
+  await page.route("**/auth/v1/user*", async (route) => {
+    console.log("Mock /auth/v1/user* called. isAnonymousSession =", isAnonymousSession);
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -247,6 +272,30 @@ test("Phase 5: Auth gate and anonymous-to-permanent session transfer", async ({ 
     });
   });
 
+  // CRITICAL: Mock /api/pdf to avoid nested Playwright Chromium conflict.
+  // The /api/pdf route calls chromium.launch() server-side. When Playwright is
+  // already running as the test runner, a second chromium.launch() inside the
+  // dev server crashes the page navigation (ERR_ABORTED). Return a valid minimal
+  // PDF so the download event fires without invoking the real PDF route.
+  const MINIMAL_PDF = Buffer.from([
+    0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34, // %PDF-1.4
+    0x0A, 0x31, 0x20, 0x30, 0x20, 0x6F, 0x62, 0x6A, // \n1 0 obj
+    0x0A, 0x3C, 0x3C, 0x2F, 0x54, 0x79, 0x70, 0x65, // \n<</Type
+    0x20, 0x2F, 0x43, 0x61, 0x74, 0x61, 0x6C, 0x6F, //  /Catalo
+    0x67, 0x3E, 0x3E, 0x0A, 0x65, 0x6E, 0x64, 0x6F, // g>>\nendo
+    0x62, 0x6A, 0x0A, 0x25, 0x25, 0x45, 0x4F, 0x46  // bj\n%%EOF
+  ]);
+  await page.route("**/api/pdf", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/pdf",
+      headers: {
+        "Content-Disposition": "attachment; filename=\"ATSPrime_Optimized_Resume_Modern.pdf\""
+      },
+      body: MINIMAL_PDF
+    });
+  });
+
   // 3. Navigate to dashboard (useSupabase is active, no mock_auth parameter)
   console.log("Navigating to dashboard with real Supabase Auth active...");
   await page.goto("http://localhost:3000/dashboard");
@@ -307,17 +356,47 @@ test("Phase 5: Auth gate and anonymous-to-permanent session transfer", async ({ 
     await page.fill("#auth-password", "SecurePassword123");
     await page.click("#auth-gate-signup-submit");
 
-    // 11. Confirm transition to OTP step
-    console.log("Verifying OTP screen is active...");
-    await page.waitForSelector("text=Check your email", { timeout: 5000 });
-    await expect(page.locator("text=We sent a 6-digit code to alex.rivera@example.com")).toBeVisible();
+    // 11. Confirm transition to link-pending step
+    console.log("Verifying link-pending screen is active...");
+    await page.waitForSelector("text=Check your inbox", { timeout: 5000 });
+    await expect(page.locator("text=We sent a confirmation link to")).toBeVisible();
 
-    // 12. Submit the 6-digit OTP code to verify and confirm
-    console.log("Submitting verification code...");
+    // 12. Simulate the link click by writing permanent session to local storage and triggering storage event
+    console.log("Simulating email confirmation link click...");
+    isAnonymousSession = false;
+    
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ftwangvhxgkzzcijlutx.supabase.co";
+    const host = new URL(supabaseUrl).hostname.split(".")[0];
+    const storageKey = `sb-${host}-auth-token`;
+
     const [download] = await Promise.all([
       page.waitForEvent("download"), // Verify that the download triggers automatically!
-      page.fill("#auth-otp-code", "123456"), // Typing OTP triggers verification
-      page.click("#auth-gate-otp-submit")
+      page.evaluate((key) => {
+        console.log("[E2E EVAL] Writing session for key:", key);
+        const session = {
+          access_token: "mock.perm.token",
+          refresh_token: "mock-perm-refresh-456",
+          expires_in: 3600,
+          expires_at: Math.floor(Date.now() / 1000) + 3600,
+          token_type: "bearer",
+          user: {
+            id: "99999999-9999-9999-9999-999999999999",
+            aud: "authenticated",
+            role: "authenticated",
+            email: "alex.rivera@example.com",
+            is_anonymous: false,
+            app_metadata: { provider: "email" },
+            user_metadata: { name: "Alex Rivera" }
+          }
+        };
+        localStorage.setItem(key, JSON.stringify(session));
+        console.log("[E2E EVAL] Wrote session to localStorage successfully");
+        window.dispatchEvent(new StorageEvent("storage", {
+          key,
+          newValue: JSON.stringify(session)
+        }));
+        console.log("[E2E EVAL] Dispatched storage event");
+      }, storageKey)
     ]);
 
     console.log("Download event triggered successfully! File:", download.suggestedFilename());

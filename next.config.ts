@@ -3,7 +3,12 @@ import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   /* config options here */
-  serverExternalPackages: ["pdfjs-dist"]
+  serverExternalPackages: [
+    "pdfjs-dist",
+    "playwright-core",
+    "@sparticuz/chromium-min",
+    "@playwright/test",
+  ],
 };
 
 export default withSentryConfig(nextConfig, {

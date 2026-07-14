@@ -8,6 +8,8 @@ test("Verify Sentry and PostHog initialization", async ({ page }) => {
 
   await page.goto("http://localhost:3000/dashboard?mock_auth=true");
   await page.waitForLoadState("load");
+  // Wait for the client-side JS bundle to load and execute (hydration indicate)
+  await page.waitForFunction(() => typeof (window as any).__POSTHOG_KEY__ !== "undefined", { timeout: 10000 });
 
   // 1. Verify that Sentry SDK is loaded and initialized (window.__SENTRY__ exists)
   const isSentryInitialized = await page.evaluate(() => {

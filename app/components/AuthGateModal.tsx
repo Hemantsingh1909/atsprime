@@ -1,26 +1,112 @@
 "use client";
 
-import { useState } from "react";
-import { X, Mail, Lock, User, ArrowRight, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { X, Mail, Lock, User, ArrowRight, RefreshCw, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
+import { createClient } from "@supabase/supabase-js";
+
+
+const POLL_INTERVAL_MS = 3_000;          // poll getUser() every 3 s
+const POLL_TIMEOUT_MS  = 10 * 60_000;   // give up after 10 min
 
 interface AuthGateModalProps {
   onClose: () => void;
 }
 
-type ModalStep = "signup" | "signin" | "otp";
+type ModalStep = "signup" | "signin" | "link-pending";
 
 export default function AuthGateModal({ onClose }: AuthGateModalProps) {
-  const { signUp, signIn, verifyEmailOtp, resendSignupOtp } = useAuth();
+  const { signUp, signIn, resendSignupOtp, isAnonymous, refreshSession } = useAuth();
 
   const [modalStep, setModalStep] = useState<ModalStep>("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [otpCode, setOtpCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(false);
+  const [timedOut, setTimedOut] = useState(false);
+
+  const pollRef     = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef  = useRef<ReturnType<typeof setTimeout>  | null>(null);
+
+  // ── Primary signal: onAuthStateChange (same-device cross-tab via localStorage)
+  useEffect(() => {
+    if (modalStep === "link-pending" && isAnonymous === false) {
+      stopPolling();
+      onClose();
+    }
+  }, [isAnonymous, modalStep, onClose]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Start / stop polling whenever link-pending state is entered or left
+  useEffect(() => {
+    if (modalStep === "link-pending") {
+      startPolling();
+    } else {
+      stopPolling();
+    }
+    return stopPolling;
+  }, [modalStep]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function startPolling() {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+    const projectRef  = supabaseUrl ? new URL(supabaseUrl).hostname.split(".")[0] : "";
+    const storageKey  = `sb-${projectRef}-auth-token`;
+
+    const sb = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    pollRef.current = setInterval(async () => {
+      try {
+        // 1. Direct local storage check (same-device cross-tab instantaneous sync)
+        const raw = localStorage.getItem(storageKey);
+        if (raw) {
+          const session = JSON.parse(raw);
+          if (session?.user && session.user.is_anonymous === false) {
+            console.log("[Poll] Detected permanent session in localStorage.");
+            await refreshSession();
+            stopPolling();
+            onClose();
+            return;
+          }
+        }
+
+        // 2. Server check fallback (cross-device or separate test contexts)
+        const { data } = await sb.auth.getUser();
+        if (data?.user && data.user.is_anonymous === false) {
+          console.log("[Poll] Detected permanent user on server:", data.user.email);
+          
+          // Sync server verified state to localStorage
+          const currentRaw = localStorage.getItem(storageKey);
+          if (currentRaw) {
+            const currentSession = JSON.parse(currentRaw);
+            currentSession.user = data.user;
+            currentSession.user.is_anonymous = false;
+            localStorage.setItem(storageKey, JSON.stringify(currentSession));
+          }
+          
+          await refreshSession();
+          stopPolling();
+          onClose();
+        }
+      } catch (err) {
+        // keep polling
+      }
+    }, POLL_INTERVAL_MS);
+
+    // Hard timeout — stop polling after 10 min, show expired message
+    timeoutRef.current = setTimeout(() => {
+      stopPolling();
+      setTimedOut(true);
+    }, POLL_TIMEOUT_MS);
+  }
+
+  function stopPolling() {
+    if (pollRef.current)    { clearInterval(pollRef.current);   pollRef.current    = null; }
+    if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
+  }
 
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
@@ -29,7 +115,7 @@ export default function AuthGateModal({ onClose }: AuthGateModalProps) {
     const result = await signUp(email.trim(), password, fullName.trim());
     setIsLoading(false);
     if (result.success) {
-      setModalStep("otp");
+      setModalStep("link-pending");
     } else {
       setError(result.error || "Sign-up failed. Please try again.");
     }
@@ -46,20 +132,6 @@ export default function AuthGateModal({ onClose }: AuthGateModalProps) {
       onClose();
     } else {
       setError(result.error || "Sign-in failed. Please check your credentials.");
-    }
-  }
-
-  async function handleOtpVerify(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setIsLoading(true);
-    const result = await verifyEmailOtp(email.trim(), otpCode.trim());
-    setIsLoading(false);
-    if (result.success) {
-      // onAuthStateChange fires → isAnonymous flips false → parent triggers download
-      onClose();
-    } else {
-      setError(result.error || "Invalid code. Please check your email and try again.");
     }
   }
 
@@ -179,7 +251,7 @@ export default function AuthGateModal({ onClose }: AuthGateModalProps) {
                 {isLoading ? (
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                 ) : (
-                  <>Create Account & Unlock Download <ArrowRight size={14} /></>
+                  <>Create Account &amp; Unlock Download <ArrowRight size={14} /></>
                 )}
               </button>
             </form>
@@ -263,7 +335,7 @@ export default function AuthGateModal({ onClose }: AuthGateModalProps) {
                 {isLoading ? (
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                 ) : (
-                  <>Sign In & Download <ArrowRight size={14} /></>
+                  <>Sign In &amp; Download <ArrowRight size={14} /></>
                 )}
               </button>
             </form>
@@ -281,73 +353,74 @@ export default function AuthGateModal({ onClose }: AuthGateModalProps) {
           </>
         )}
 
-        {/* ── OTP STEP ─────────────────────────────────────── */}
-        {modalStep === "otp" && (
+        {/* ── LINK PENDING STEP ────────────────────────────── */}
+        {modalStep === "link-pending" && (
           <>
             <div className="mb-6">
               <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10">
                 <Mail size={20} className="text-emerald-400" />
               </div>
-              <h2 className="text-xl font-semibold text-white">Check your email</h2>
+              <h2 className="text-xl font-semibold text-white">
+                {timedOut ? "Link expired" : "Check your inbox"}
+              </h2>
               <p className="mt-1 text-sm text-zinc-400">
-                We sent a 6-digit code to{" "}
-                <span className="font-medium text-zinc-300">{email}</span>.
-                Enter it below to confirm your account and unlock your download.
+                {timedOut ? (
+                  <>
+                    The 10-minute window has expired. Please start over and click the
+                    confirmation link within 10 minutes of receiving it.
+                  </>
+                ) : (
+                  <>
+                    We sent a confirmation link to{" "}
+                    <span className="font-medium text-zinc-300">{email}</span>.{" "}
+                    Click the link in that email — this window will close and your
+                    download will start automatically.
+                  </>
+                )}
               </p>
             </div>
 
-            <form onSubmit={handleOtpVerify} className="space-y-4">
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-zinc-400" htmlFor="auth-otp-code">
-                  6-digit verification code
-                </label>
-                <input
-                  id="auth-otp-code"
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]{6}"
-                  maxLength={6}
-                  required
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
-                  placeholder="123456"
-                  className="w-full rounded-lg border border-white/10 bg-white/5 py-3 text-center text-2xl font-mono tracking-[0.5em] text-white placeholder-zinc-700 outline-none transition focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30"
-                />
-              </div>
-
-              {error && (
-                <div className="flex items-start gap-2 rounded-lg border border-red-500/20 bg-red-500/10 p-3">
-                  <AlertCircle size={14} className="mt-0.5 flex-shrink-0 text-red-400" />
-                  <p className="text-xs text-red-400">{error}</p>
+            {/* Waiting indicator OR expired notice */}
+            {timedOut ? (
+              <button
+                id="auth-gate-start-over"
+                onClick={() => { setTimedOut(false); setModalStep("signup"); setError(null); }}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-violet-600 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500"
+              >
+                Start over <ArrowRight size={14} />
+              </button>
+            ) : (
+              <>
+                <div className="flex flex-col items-center gap-3 py-6">
+                  <Loader2 size={32} className="animate-spin text-violet-400" />
+                  <p className="text-xs text-zinc-500">Waiting for confirmation… (times out in 10 min)</p>
                 </div>
-              )}
 
-              <button
-                id="auth-gate-otp-submit"
-                type="submit"
-                disabled={isLoading || otpCode.length < 6}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-violet-600 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:opacity-60"
-              >
-                {isLoading ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                ) : (
-                  <>Confirm & Unlock Download <ArrowRight size={14} /></>
-                )}
-              </button>
-            </form>
+                <div className="mt-2 flex items-center justify-center gap-1.5">
+                  <span className="text-xs text-zinc-500">Didn&apos;t receive the email?</span>
+                  <button
+                    id="auth-gate-resend"
+                    onClick={handleResend}
+                    disabled={resendCooldown}
+                    className="flex items-center gap-1 text-xs text-violet-400 transition hover:text-violet-300 disabled:opacity-40"
+                  >
+                    <RefreshCw size={11} />
+                    {resendCooldown ? "Sent — wait 30s" : "Resend link"}
+                  </button>
+                </div>
 
-            <div className="mt-4 flex items-center justify-center gap-1.5">
-              <span className="text-xs text-zinc-500">Didn&apos;t receive the email?</span>
-              <button
-                id="auth-gate-resend"
-                onClick={handleResend}
-                disabled={resendCooldown}
-                className="flex items-center gap-1 text-xs text-violet-400 transition hover:text-violet-300 disabled:opacity-40"
-              >
-                <RefreshCw size={11} />
-                {resendCooldown ? "Sent — wait 30s" : "Resend code"}
-              </button>
-            </div>
+                <p className="mt-4 text-center text-xs text-zinc-500">
+                  Wrong email?{" "}
+                  <button
+                    id="auth-gate-back-to-signup"
+                    onClick={() => { stopPolling(); setModalStep("signup"); setError(null); }}
+                    className="text-violet-400 hover:text-violet-300 transition"
+                  >
+                    Go back
+                  </button>
+                </p>
+              </>
+            )}
           </>
         )}
       </div>

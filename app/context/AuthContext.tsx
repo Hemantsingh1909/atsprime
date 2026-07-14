@@ -38,6 +38,7 @@ interface AuthContextType {
   deleteAccount: () => Promise<{ success: boolean; error?: string }>;
   verifyEmailOtp: (email: string, token: string) => Promise<{ success: boolean; error?: string }>;
   resendSignupOtp: (email: string) => Promise<{ success: boolean; error?: string }>;
+  refreshSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -69,33 +70,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const loadProfileAndSetUser = async (sessionUser: { id: string; email?: string; user_metadata?: { full_name?: string; name?: string; avatar_url?: string } }) => {
+    let name = sessionUser.user_metadata?.full_name || sessionUser.user_metadata?.name || sessionUser.email?.split("@")[0] || "";
+    let avatarUrl = sessionUser.user_metadata?.avatar_url || undefined;
+
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("name, avatar_url")
+        .eq("id", sessionUser.id)
+        .maybeSingle();
+      if (data) {
+        if (data.name) name = data.name;
+        if (data.avatar_url) avatarUrl = data.avatar_url;
+      }
+    } catch (e) {
+      console.warn("Could not load user profile details from public.profiles table:", e);
+    }
+
+    setUser({
+      email: sessionUser.email || "",
+      name,
+      avatarUrl,
+    });
+  };
+
   // 1. Initial Session Loader & Auth Listener
   useEffect(() => {
     if (useSupabase) {
-      const loadProfileAndSetUser = async (sessionUser: { id: string; email?: string; user_metadata?: { full_name?: string; name?: string; avatar_url?: string } }) => {
-        let name = sessionUser.user_metadata?.full_name || sessionUser.user_metadata?.name || sessionUser.email?.split("@")[0] || "";
-        let avatarUrl = sessionUser.user_metadata?.avatar_url || undefined;
-
-        try {
-          const { data } = await supabase
-            .from("profiles")
-            .select("name, avatar_url")
-            .eq("id", sessionUser.id)
-            .maybeSingle();
-          if (data) {
-            if (data.name) name = data.name;
-            if (data.avatar_url) avatarUrl = data.avatar_url;
-          }
-        } catch (e) {
-          console.warn("Could not load user profile details from public.profiles table:", e);
-        }
-
-        setUser({
-          email: sessionUser.email || "",
-          name,
-          avatarUrl,
-        });
-      };
 
       // Get initial session or sign in anonymously if guest
       supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -123,6 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const {
         data: { subscription },
       } = supabase.auth.onAuthStateChange((_event, session) => {
+        console.log("[AuthContext] onAuthStateChange event:", _event, "is_anonymous:", session?.user?.is_anonymous);
         if (session?.user) {
           setIsAnonymous(session.user.is_anonymous ?? true);
           loadProfileAndSetUser(session.user);
@@ -144,6 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (activeSession) {
             const parsedUser = JSON.parse(activeSession) as User;
             setUser(parsedUser);
+            setIsAnonymous(false);
             
             const userResumes = localStorage.getItem(`atsprime_resumes_${parsedUser.email}`);
             if (userResumes) {
@@ -315,6 +319,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const newUser: User = { email: emailTrim, name: fullName.trim() };
         localStorage.setItem("atsprime_session", JSON.stringify(newUser));
         setUser(newUser);
+        setIsAnonymous(false);
 
         return { success: true };
       } catch {
@@ -466,6 +471,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const activeUser: User = { email: emailTrim, name: emailTrim.split("@")[0] };
         localStorage.setItem("atsprime_session", JSON.stringify(activeUser));
         setUser(activeUser);
+        setIsAnonymous(false);
 
         return { success: true };
       } catch {
@@ -506,6 +512,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     setUser(null);
+    setIsAnonymous(true);
     setSavedResumes([]);
 
     if (useSupabase) {
@@ -828,6 +835,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const refreshSession = async () => {
+    if (!useSupabase || typeof window === "undefined") return;
+    try {
+      // Read the session directly from localStorage first.
+      // Calling setSession() with a JWT validates it against Supabase servers —
+      // this works fine with real tokens in production, but causes SIGNED_OUT with
+      // mock/intercepted tokens used in tests. Reading localStorage avoids that.
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      if (!supabaseUrl) return;
+      const host = new URL(supabaseUrl).hostname.split(".")[0];
+      const key = `sb-${host}-auth-token`;
+      const sessionStr = localStorage.getItem(key);
+      if (!sessionStr) return;
+
+      const storedSession = JSON.parse(sessionStr);
+      const storedUser = storedSession?.user;
+      if (!storedUser) return;
+
+      console.log("[AuthContext] refreshSession — stored is_anonymous:", storedUser.is_anonymous);
+
+      // Update React state directly from the stored session
+      setIsAnonymous(storedUser.is_anonymous ?? true);
+      await loadProfileAndSetUser(storedUser);
+    } catch (e) {
+      console.warn("Error refreshing auth session:", e);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -849,6 +884,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         deleteAccount,
         verifyEmailOtp,
         resendSignupOtp,
+        refreshSession,
       }}
     >
       {children}
